@@ -1,0 +1,30 @@
+{
+    "files.associations": {
+        "cmath": "cpp",
+        "core": "cpp",
+        "cinttypes": "cpp",
+        "cctype": "cpp",
+        "cstdarg": "cpp",
+        "cstddef": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "ctime": "cpp",
+        "cwchar": "cpp",
+        "atomic": "cpp",
+        "cstdint": "cpp",
+        "exception": "cpp",
+        "iosfwd": "cpp",
+        "typeinfo": "cpp",
+        "iostream": "cpp",
+        "string": "cpp",
+        "streambuf": "cpp",
+        "__config": "cpp",
+        "geometry": "cpp",
+        "limits": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp"
+    }
+}
