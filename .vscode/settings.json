@@ -25,6 +25,16 @@
         "array": "cpp",
         "functional": "cpp",
         "tuple": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "clocale": "cpp",
+        "cwctype": "cpp",
+        "*.tcc": "cpp",
+        "chrono": "cpp",
+        "initializer_list": "cpp",
+        "new": "cpp",
+        "ratio": "cpp",
+        "stdexcept": "cpp",
+        "thread": "cpp",
+        "type_traits": "cpp"
     }
 }

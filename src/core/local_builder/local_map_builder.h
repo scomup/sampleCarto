@@ -23,7 +23,7 @@
 
 //#include "src/mapping/scan_matching/real_time_correlative_scan_matcher.h"
 //#include "src/mapping/scan_matching/ceres_scan_matcher.h"
-//#include "src/mapping/submaps.h"
+#include "src/core/map/submaps.h"
 #include "src/core/local_builder/motion_filter.h"
 #include "src/sensor/odometry_data.h"
 #include "src/sensor/range_data.h"
@@ -49,9 +49,9 @@ class LocalMapBuilder
 
     struct InsertionResult
     {
-        //std::shared_ptr<const mapping::TrajectoryNode::Data> constant_data;
+        //std::shared_ptr<const TrajectoryNode::Data> constant_data;
         transform::Rigid3d pose_observation;
-        //std::vector<std::shared_ptr<const Submap>> insertion_submaps;
+        std::vector<std::shared_ptr<const map::Submap>> insertion_submaps;
     };
 
     explicit LocalMapBuilder(const LocalMapBuilderOptions &options);
@@ -60,7 +60,7 @@ class LocalMapBuilder
     LocalMapBuilder(const LocalMapBuilder&) = delete;
     LocalMapBuilder& operator=(const LocalMapBuilder&) = delete;
 
-    //const mapping::PoseEstimate &pose_estimate() const;
+    //const PoseEstimate &pose_estimate() const;
     
 
     // Range data must be approximately horizontal for 2D SLAM.
@@ -86,9 +86,10 @@ class LocalMapBuilder
     // Lazily constructs a PoseExtrapolator.
     void InitializeExtrapolator(double time);
 
-    //ActiveSubmaps active_submaps_;
+    
     const LocalMapBuilderOptions options_;
-    MotionFilter motion_filter_;    
+    MotionFilter motion_filter_;   
+    map::ActiveSubmaps active_submaps_; 
     //scan_matching::RealTimeCorrelativeScanMatcher real_time_correlative_scan_matcher_;
     //scan_matching::CeresScanMatcher ceres_scan_matcher_;
     std::unique_ptr<core::PoseExtrapolator> extrapolator_;

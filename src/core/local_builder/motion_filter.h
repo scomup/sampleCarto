@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SAMPLE_CARTO_CORE_3D_MOTION_FILTER_H_
-#define SAMPLE_CARTO_CORE_3D_MOTION_FILTER_H_
+#ifndef SAMPLE_CARTO_CORE_MAP_MOTION_FILTER_H_
+#define SAMPLE_CARTO_CORE_MAP_MOTION_FILTER_H_
 
 #include <limits>
 
@@ -52,7 +52,7 @@ class MotionFilter {
   transform::Rigid3d last_pose_;
 };
 
-}  // namespace mapping_3d
-}  // namespace cartographer
+}  // namespace core
+}  // namespace sample_carto
 
-#endif  // SAMPLE_CARTO_CORE_3D_MOTION_FILTER_H_
+#endif  // SAMPLE_CARTO_CORE_MAP_MOTION_FILTER_H_

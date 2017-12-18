@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-#ifndef SAMPLE_CARTOmapping_SUBMAPS_H_
-#define SAMPLE_CARTOmapping_SUBMAPS_H_
+#ifndef SAMPLE_CARTO_CORE_MAP_SUBMAPS_H_
+#define SAMPLE_CARTO_CORE_MAP_SUBMAPS_H_
 
 #include <memory>
 #include <vector>
 
 #include "Eigen/Core"
 #include "src/common/lua_parameter_dictionary.h"
-#include "src/mapping/submaps.h"
-#include "src/mapping/map_limits.h"
-#include "src/mapping/probability_grid.h"
-#include "src/mapping/proto/submaps_options.pb.h"
-#include "src/mapping/range_data_inserter.h"
+#include "src/core/map/map_limits.h"
+#include "src/core/map/probability_grid.h"
+#include "src/core/map/range_data_inserter.h"
 #include "src/sensor/range_data.h"
 #include "src/transform/rigid_transform.h"
 
 namespace sample_carto
 {
-namespace mapping
+namespace core
+{
+namespace map
 {
 
 // Converts the given probability to log odds.
@@ -59,23 +59,15 @@ inline uint8 ProbabilityToLogOddsInteger(const float probability)
 ProbabilityGrid ComputeCroppedProbabilityGrid(
     const ProbabilityGrid &probability_grid);
 
-proto::SubmapsOptions CreateSubmapsOptions(
-    common::LuaParameterDictionary *parameter_dictionary);
 
 class Submap
 {
   public:
     Submap(const MapLimits &limits, const Eigen::Vector2f &origin);
-    //explicit Submap(const mapping::proto::Submap2D &proto);
-
-    //void ToProto(mapping::proto::Submap *proto) const;
 
     const ProbabilityGrid &probability_grid() const { return probability_grid_; }
     bool finished() const { return finished_; }
 
-    //void ToResponseProto(
-    //    const transform::Rigid3d &global_submap_pose,
-    //    mapping::proto::SubmapQuery::Response *response) const;
 
     // Insert 'range_data' into this submap using 'range_data_inserter'. The
     // submap must not be finished yet.
@@ -87,7 +79,7 @@ class Submap
     transform::Rigid3d local_pose() const { return local_pose_; }
 
     // Number of RangeData inserted.
-    int num_range_data() const { return num_range_data_; }
+    uint32 num_range_data() const { return num_range_data_; }
 
   protected:
     void SetNumRangeData(const int num_range_data)
@@ -102,6 +94,15 @@ class Submap
     int num_range_data_ = 0;
 };
 
+class SubmapsOptions
+{
+  public:
+    void Create(common::LuaParameterDictionary *const parameter_dictionary);
+    double resolution_;
+    uint32 num_range_data_;
+    RangeDataInserterOptions range_data_inserter_options_;
+};
+
 // Except during initialization when only a single submap exists, there are
 // always two submaps into which scans are inserted: an old submap that is used
 // for matching, and a new one, which will be used for matching next, that is
@@ -114,8 +115,7 @@ class Submap
 class ActiveSubmaps
 {
   public:
-    explicit ActiveSubmaps(const proto::SubmapsOptions &options);
-
+    ActiveSubmaps(const SubmapsOptions &options);
     ActiveSubmaps(const ActiveSubmaps &) = delete;
     ActiveSubmaps &operator=(const ActiveSubmaps &) = delete;
 
@@ -132,13 +132,14 @@ class ActiveSubmaps
     void FinishSubmap();
     void AddSubmap(const Eigen::Vector2f &origin);
 
-    const proto::SubmapsOptions options_;
+    const SubmapsOptions options_;
     int matching_submap_index_ = 0;
     std::vector<std::shared_ptr<Submap>> submaps_;
     RangeDataInserter range_data_inserter_;
 };
 
-} // namespace mapping
+} // map
+} // namespace core
 } // namespace sample_carto
 
-#endif // SAMPLE_CARTOmapping_SUBMAPS_H_
+#endif // SAMPLE_CARTO_CORE_MAP_SUBMAPS_H_

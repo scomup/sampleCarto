@@ -33,6 +33,8 @@ LocalMapBuilderOptions::LocalMapBuilderOptions(common::LuaParameterDictionary *c
     scans_per_accumulation_ = parameter_dictionary->GetInt("scans_per_accumulation");
     use_online_correlative_scan_matching_ = parameter_dictionary->GetBool("use_online_correlative_scan_matching");
     motion_filter_options_.Create(parameter_dictionary->GetDictionary("motion_filter").get());
+    submaps_options_.Create(parameter_dictionary->GetDictionary("submaps").get());
+    
 }
 
 } // namespace core

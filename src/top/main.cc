@@ -11,6 +11,7 @@
 #include <src/top/sensor_bridge.h>
 
 #include "BagReader.h"
+#include "MapPublisher.h"
 
 using namespace sample_carto;
 int main(int argc, char **argv)
@@ -25,6 +26,9 @@ int main(int argc, char **argv)
     auto local_map_builder_options = core::LocalMapBuilderOptions(parameter_dictionary.GetDictionary("trajectory_builder").get()->GetDictionary("trajectory_builder_2d").get());
     auto golbal_map_manager_ptr = std::make_shared<core::GlobalMapManager>(local_map_builder_options);
     top::SensorBridge sensor_bridge(golbal_map_manager_ptr);
+
+	top::Publisher pub = top::Publisher(golbal_map_manager_ptr, 0.3);
+	new std::thread(&top::Publisher::pcd, &pub);
 
     ros::Rate loop_rate(100);
 

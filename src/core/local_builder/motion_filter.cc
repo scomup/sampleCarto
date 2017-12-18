@@ -52,5 +52,5 @@ bool MotionFilter::IsSimilar(const double time,
   return false;
 }
 
-}  // namespace mapping_3d
-}  // namespace cartographer
+}  // namespace core
+}  // namespace sample_carto

@@ -40,7 +40,7 @@ class GlobalMapManager{
   GlobalMapManager(const GlobalMapManager&) = delete;
   GlobalMapManager& operator=(const GlobalMapManager&) = delete;
 
-  //const mapping::PoseEstimate& pose_estimate() const {
+  //const PoseEstimate& pose_estimate() const {
   //  return local_map_builder_.pose_estimate();
   //}
 
@@ -48,7 +48,8 @@ class GlobalMapManager{
   {
     auto insertion_result = local_map_builder_.AddRangeData( time, sensor::RangeData{origin, ranges, {}});
     //std::cout<<"All pending works:" << sparse_pose_graph_2d_->constraint_builder_.GetAllPendingWork() <<std::endl;
-    
+    if (insertion_result != nullptr)//temp_liu
+      submap_ = insertion_result->insertion_submaps.back();//temp_liu
     /*
     if (insertion_result == nullptr)
     {
@@ -68,15 +69,16 @@ class GlobalMapManager{
 
   //std::unique_ptr<SparsePoseGraph2D>& sparse_pose_graph() { return sparse_pose_graph_2d_; }
   
-
+  std::shared_ptr<const map::Submap>& submap() { return submap_; } //temp_liu
 
 private:
   //common::ThreadPool thread_pool_;
   LocalMapBuilder local_map_builder_;
+  std::shared_ptr<const map::Submap> submap_;//temp_liu
   //std::unique_ptr<SparsePoseGraph2D> sparse_pose_graph_2d_;
 };
 
-}  // namespace mapping
+}  // namespace core
 }  // namespace sample_carto
 
 #endif  // SAMPLE_CARTO_MAPPING_GLOBAL_TRAJECTORY_BUILDER_H_

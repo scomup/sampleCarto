@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "../mapping/submaps.h"
+#include "submaps.h"
 
 #include <cinttypes>
 #include <cmath>
@@ -29,7 +29,9 @@
 
 namespace sample_carto
 {
-namespace mapping
+namespace core
+{
+namespace map
 {
 
 ProbabilityGrid ComputeCroppedProbabilityGrid(
@@ -54,25 +56,13 @@ ProbabilityGrid ComputeCroppedProbabilityGrid(
   return cropped_grid;
 }
 
-proto::SubmapsOptions CreateSubmapsOptions(
-    common::LuaParameterDictionary *const parameter_dictionary)
+void SubmapsOptions::Create(common::LuaParameterDictionary *const parameter_dictionary)
 {
-  proto::SubmapsOptions options;
-  //options.set_resolution(0.05);
-  //options.set_num_range_data(30);
-  //*options.mutable_range_data_inserter_options() =
-  //    CreateRangeDataInserterOptions(
-  //      parameter_dictionary);
-
-  options.set_resolution(parameter_dictionary->GetDouble("resolution"));
-  options.set_num_range_data(parameter_dictionary->GetNonNegativeInt("num_range_data"));
-  *options.mutable_range_data_inserter_options() =
-      CreateRangeDataInserterOptions(
-          parameter_dictionary->GetDictionary("range_data_inserter").get());
-  CHECK_GT(options.num_range_data(), 0);
-  return options;
+  resolution_ = parameter_dictionary->GetDouble("resolution");
+  num_range_data_ = parameter_dictionary->GetNonNegativeInt("num_range_data");
+  range_data_inserter_options_.Create(parameter_dictionary->GetDictionary("range_data_inserter").get());
+  CHECK_GT(num_range_data_, 0);
 }
-
 
 Submap::Submap(const MapLimits &limits, const Eigen::Vector2f &origin)
     : local_pose_(transform::Rigid3d::Translation(Eigen::Vector3d(origin.x(), origin.y(), 0.))),
@@ -93,9 +83,9 @@ void Submap::Finish()
   finished_ = true;
 }
 
-ActiveSubmaps::ActiveSubmaps(const proto::SubmapsOptions &options)
+ActiveSubmaps::ActiveSubmaps(const SubmapsOptions &options)
 : options_(options),
-  range_data_inserter_(options.range_data_inserter_options())
+  range_data_inserter_(options.range_data_inserter_options_)
 {
 // We always want to have at least one likelihood field which we can return,
 // and will create it at the origin in absence of a better choice.
@@ -108,7 +98,7 @@ void ActiveSubmaps::InsertRangeData(const sensor::RangeData &range_data)
   {
     submap->InsertRangeData(range_data, range_data_inserter_);
   }
-  if (submaps_.back()->num_range_data() == options_.num_range_data())
+  if (submaps_.back()->num_range_data() == options_.num_range_data_)
   {
     AddSubmap(range_data.origin.head<2>());
   }
@@ -139,12 +129,13 @@ void ActiveSubmaps::AddSubmap(const Eigen::Vector2f &origin)
   }
   constexpr int kInitialSubmapSize = 100;
   submaps_.push_back(common::make_unique<Submap>(
-      MapLimits(options_.resolution(),
-                origin.cast<double>() + 0.5 * kInitialSubmapSize * options_.resolution() * Eigen::Vector2d::Ones(),
+      MapLimits(options_.resolution_,
+                origin.cast<double>() + 0.5 * kInitialSubmapSize * options_.resolution_ * Eigen::Vector2d::Ones(),
                 CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
       origin));
   LOG(INFO) << "Added submap " << matching_submap_index_ + submaps_.size();
 }
 
-} // namespace mapping
+} // map
+} // namespace core
 } // namespace sample_carto

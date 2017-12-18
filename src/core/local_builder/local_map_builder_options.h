@@ -19,6 +19,7 @@
 
 #include "src/common/lua_parameter_dictionary.h"
 #include "src/core/local_builder/motion_filter.h"
+#include "src/core/map/submaps.h"
 
 namespace sample_carto {
 namespace core {
@@ -35,6 +36,7 @@ class LocalMapBuilderOptions
     int scans_per_accumulation_;
     bool use_online_correlative_scan_matching_;
     MotionFilterOptions motion_filter_options_; 
+    map::SubmapsOptions submaps_options_; 
 };
 
 }  // namespace core

@@ -29,9 +29,9 @@ namespace core
 {
 
 LocalMapBuilder::LocalMapBuilder(const LocalMapBuilderOptions &options)
-    : options_(options)
-    //,active_submaps_(options.submaps_options())
+    :options_(options)
     ,motion_filter_(options.motion_filter_options_)
+    ,active_submaps_(options.submaps_options_)
     //,real_time_correlative_scan_matcher_(
     //    options_.real_time_correlative_scan_matcher_options())
     //,ceres_scan_matcher_(options_.ceres_scan_matcher_options())
@@ -71,33 +71,34 @@ std::unique_ptr<LocalMapBuilder::InsertionResult> LocalMapBuilder::AddAccumulate
         transform::Embed3D(pose_estimate_2d) * gravity_alignment;
     extrapolator_->AddPose(time, pose_estimate);
 
-    /*
+    
     if (motion_filter_.IsSimilar(time, pose_estimate))
     {
         return nullptr;
     }
+    
     // Querying the active submaps must be done here before calling
     // InsertRangeData() since the queried values are valid for next insertion.
-    std::vector<std::shared_ptr<const Submap>> insertion_submaps;
-    for (const std::shared_ptr<Submap> &submap : active_submaps_.submaps())
+    std::vector<std::shared_ptr<const map::Submap>> insertion_submaps;
+    for (const std::shared_ptr<map::Submap> &submap : active_submaps_.submaps())
     {
         insertion_submaps.push_back(submap);
     }
+    
     active_submaps_.InsertRangeData(
         TransformRangeData(gravity_aligned_range_data,
                            transform::Embed3D(pose_estimate_2d.cast<float>())));
 
-
+    
     return common::make_unique<InsertionResult>(InsertionResult{
-        std::make_shared<const mapping::TrajectoryNode::Data>(
-            mapping::TrajectoryNode::Data{
-                time,
-                gravity_alignment.rotation(),
-                gravity_aligned_range_data.returns
-            }),
+        //std::make_shared<const TrajectoryNode::Data>(
+            //TrajectoryNode::Data{
+            //    time,
+            //    gravity_alignment.rotation(),
+            //    gravity_aligned_range_data.returns
+            //}),
         pose_estimate, std::move(insertion_submaps)});
-        */
-        return nullptr;
+        
 
 }
 
@@ -211,7 +212,7 @@ void LocalMapBuilder::ScanMatch(
 void LocalMapBuilder::AddOdometerData(
     const sensor::OdometryData &odometry_data)
 {
-    /*
+    
     if (extrapolator_ == nullptr)
     {
         // Until we've initialized the extrapolator we cannot add odometry data.
@@ -219,7 +220,7 @@ void LocalMapBuilder::AddOdometerData(
         return;
     }
     extrapolator_->AddOdometryData(odometry_data);
-    */
+    
 }
 
 
