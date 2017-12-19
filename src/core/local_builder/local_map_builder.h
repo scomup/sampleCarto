@@ -30,6 +30,7 @@
 #include "src/transform/rigid_transform.h"
 #include "src/core/local_builder/pose_extrapolator.h"
 #include "src/core/local_builder/motion_filter.h"
+#include "src/core/sparse_pose_graph/node.h"
 
 
 
@@ -49,7 +50,7 @@ class LocalMapBuilder
 
     struct InsertionResult
     {
-        //std::shared_ptr<const TrajectoryNode::Data> constant_data;
+        std::shared_ptr<const Node::Data> constant_data;
         transform::Rigid3d pose_observation;
         std::vector<std::shared_ptr<const map::Submap>> insertion_submaps;
     };

@@ -64,7 +64,7 @@ std::unique_ptr<LocalMapBuilder::InsertionResult> LocalMapBuilder::AddAccumulate
     const transform::Rigid3d non_gravity_aligned_pose_prediction = extrapolator_->ExtrapolatePose(time);
     const transform::Rigid2d pose_prediction = transform::Project2D(non_gravity_aligned_pose_prediction * gravity_alignment.inverse());
 
-    transform::Rigid2d pose_estimate_2d;
+    transform::Rigid2d pose_estimate_2d = pose_prediction;//add liu
     ScanMatch(time, pose_prediction, gravity_aligned_range_data, &pose_estimate_2d);
 
     const transform::Rigid3d pose_estimate =
@@ -89,17 +89,12 @@ std::unique_ptr<LocalMapBuilder::InsertionResult> LocalMapBuilder::AddAccumulate
         TransformRangeData(gravity_aligned_range_data,
                            transform::Embed3D(pose_estimate_2d.cast<float>())));
 
-    
     return common::make_unique<InsertionResult>(InsertionResult{
-        //std::make_shared<const TrajectoryNode::Data>(
-            //TrajectoryNode::Data{
-            //    time,
-            //    gravity_alignment.rotation(),
-            //    gravity_aligned_range_data.returns
-            //}),
+        std::make_shared<const Node::Data>(
+            Node::Data{
+                time,
+                gravity_aligned_range_data.returns}),
         pose_estimate, std::move(insertion_submaps)});
-        
-
 }
 
 sensor::RangeData LocalMapBuilder::TransformAndFilterRangeData(

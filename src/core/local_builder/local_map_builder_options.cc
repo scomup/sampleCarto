@@ -22,7 +22,7 @@ namespace sample_carto
 namespace core
 {
 
-LocalMapBuilderOptions::LocalMapBuilderOptions(common::LuaParameterDictionary *const parameter_dictionary)
+void LocalMapBuilderOptions::Create(common::LuaParameterDictionary *const parameter_dictionary)
 {
 
     min_range_ = parameter_dictionary->GetDouble("min_range");

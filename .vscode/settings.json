@@ -35,6 +35,9 @@
         "ratio": "cpp",
         "stdexcept": "cpp",
         "thread": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "condition_variable": "cpp",
+        "mutex": "cpp",
+        "system_error": "cpp"
     }
 }

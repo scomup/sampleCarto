@@ -27,7 +27,7 @@ namespace core {
 class LocalMapBuilderOptions
 {
   public:
-    LocalMapBuilderOptions(common::LuaParameterDictionary* const parameter_dictionary);
+    void Create(common::LuaParameterDictionary* const parameter_dictionary);
     double min_range_;
     double max_range_;
     double min_z_;

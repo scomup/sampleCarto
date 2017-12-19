@@ -196,11 +196,10 @@ class Publisher
 
     void makeMap()
     {
-        const auto submap_data_top = p_global_trajectory_builder_->submap();
-        if (submap_data_top == nullptr)
-        return;
-        //if (!(all_submap_data.size() == 1 && all_submap_data[0].size() > 0))
-        //    return;
+        
+        const auto all_submap_data = p_global_trajectory_builder_->sparse_pose_graph()->GetAllSubmapData();
+        if (all_submap_data.size() == 0)
+            return;
         std::vector<int8_t> &data = map_.map.data;
 
         map_.map.info.origin.position.x = -100;
@@ -215,13 +214,13 @@ class Publisher
         map_.map.header.stamp = ros::Time::now();
         memset(&map_.map.data[0], -1, sizeof(int8_t) * map_.map.data.size());
         
-        //for (core::map::SparsePoseGraph::SubmapData m : all_submap_data[0])
-        const auto submap = submap_data_top;
+        for (core::SparsePoseGraph::SubmapDataWithPose m : all_submap_data)
         {
             Eigen::Array2i offset;
             core::map::CellLimits limits;
-            auto grid = submap->probability_grid();
+            auto grid = m.submap->probability_grid();
             grid.ComputeCroppedLimits(&offset, &limits);
+            auto to_optimized = m.pose * m.submap->local_pose().inverse();
 
             for (const Eigen::Array2i &xy_index : core::map::XYIndexRangeIterator(limits))
             {
@@ -231,9 +230,10 @@ class Publisher
                     double x = grid.limits().max().x() - (offset.y() + xy_index.y() + 0.5) * grid.limits().resolution();
                     double y = grid.limits().max().y() - (offset.x() + xy_index.x() + 0.5) * grid.limits().resolution();
 
+                    auto optimized = to_optimized * transform::Rigid3d::Translation(Eigen::Vector3d(x, y, 0.));
 
-                    int x_map = (x) / grid.limits().resolution() + map_.map.info.width / 2;
-                    int y_map = (y) / grid.limits().resolution() + map_.map.info.height / 2;
+                    int x_map = (optimized.translation().x()) / grid.limits().resolution() + map_.map.info.width / 2;
+                    int y_map = (optimized.translation().y()) / grid.limits().resolution() + map_.map.info.height / 2;
 
                     const double p = grid.GetProbability(xy_index + offset);
                     if (data[y_map * map_.map.info.width + x_map] == -1)
@@ -249,6 +249,7 @@ class Publisher
                 }
             }
         }
+        
     }
 
     void pcd()

@@ -82,6 +82,11 @@ void PoseExtrapolator::AddOdometryData(
   linear_velocity_from_odometry_ =
       orientation_at_newest_odometry_time *
       linear_velocity_in_tracking_frame_at_newest_odometry_time;
+
+  //auto pose_now = ExtrapolatePose(odometry_data.time);// add by liu
+  //AddPose(odometry_data.time, pose_now);
+
+
 }
 
 transform::Rigid3d PoseExtrapolator::ExtrapolatePose(const double time) {
