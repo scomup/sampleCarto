@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <deque>
 
 #include "src/common/lua_parameter_dictionary.h"
 #include "src/common/mutex.h"
@@ -31,6 +32,7 @@
 #include "src/transform/rigid_transform.h"
 #include "src/sensor/odometry_data.h"
 #include "src/sensor/range_data.h"
+#include "src/common/thread_pool.h"
 
 namespace sample_carto
 {
@@ -106,7 +108,7 @@ public:
   ~SparsePoseGraph();
   SparsePoseGraph(const SparsePoseGraph &) = delete;
   SparsePoseGraph &operator=(const SparsePoseGraph &) = delete;
-  SparsePoseGraph(const SparsePoseGraphOptions &options);
+  SparsePoseGraph(const SparsePoseGraphOptions &options, common::ThreadPool* thread_pool);
 
   // Freezes a trajectory. Poses in this trajectory will not be optimized.
   //virtual void FreezeTrajectory(int trajectory_id) = 0;
@@ -163,6 +165,8 @@ std::vector<SubmapDataWithPose> GetAllSubmapData();
 
 private:
   SubmapDataWithPose GetSubmapDataUnderLock(const int submap_id);
+    // Handles a new work item.
+  void AddWorkItem(const std::function<void()>& work_item);
 
   const SparsePoseGraphOptions options_;
   common::Mutex mutex_;
@@ -170,7 +174,7 @@ private:
   std::vector<SubmapData> submap_data_;
   std::unique_ptr<FixedRatioSampler> localization_samplers_;
   std::map<int, transform::Rigid2d> optimized_submap_transforms_;
-
+  std::unique_ptr<std::deque<std::function<void()>>> work_queue_;
 };
 
 } // namespace core

@@ -34,6 +34,9 @@ void LocalMapBuilderOptions::Create(common::LuaParameterDictionary *const parame
     use_online_correlative_scan_matching_ = parameter_dictionary->GetBool("use_online_correlative_scan_matching");
     motion_filter_options_.Create(parameter_dictionary->GetDictionary("motion_filter").get());
     submaps_options_.Create(parameter_dictionary->GetDictionary("submaps").get());
+    real_time_correlative_scan_matcher_options_.Create(parameter_dictionary->GetDictionary("real_time_correlative_scan_matcher").get());
+    ceres_scan_matcher_options_.Create(parameter_dictionary->GetDictionary("ceres_scan_matcher").get());
+
     
 }
 

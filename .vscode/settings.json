@@ -38,6 +38,9 @@
         "type_traits": "cpp",
         "condition_variable": "cpp",
         "mutex": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "vector": "cpp",
+        "unordered_map": "cpp",
+        "deque": "cpp"
     }
 }

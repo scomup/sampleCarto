@@ -87,4 +87,4 @@ class MapLimits {
 }
 }
 
-#endif  // SAMPLE_CARTOmapping_MAP_LIMITS_H_
+#endif  // SAMPLE_CARTO_CORE_MAP_MAP_LIMITS_H_

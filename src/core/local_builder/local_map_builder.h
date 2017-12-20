@@ -21,8 +21,8 @@
 
 #include "local_map_builder_options.h"
 
-//#include "src/mapping/scan_matching/real_time_correlative_scan_matcher.h"
-//#include "src/mapping/scan_matching/ceres_scan_matcher.h"
+#include "src/core/scan_matching/real_time_correlative_scan_matcher.h"
+#include "src/core/scan_matching/ceres_scan_matcher.h"
 #include "src/core/map/submaps.h"
 #include "src/core/local_builder/motion_filter.h"
 #include "src/sensor/odometry_data.h"
@@ -91,9 +91,10 @@ class LocalMapBuilder
     const LocalMapBuilderOptions options_;
     MotionFilter motion_filter_;   
     map::ActiveSubmaps active_submaps_; 
-    //scan_matching::RealTimeCorrelativeScanMatcher real_time_correlative_scan_matcher_;
-    //scan_matching::CeresScanMatcher ceres_scan_matcher_;
     std::unique_ptr<core::PoseExtrapolator> extrapolator_;
+    scan_matching::RealTimeCorrelativeScanMatcher real_time_correlative_scan_matcher_;
+    scan_matching::CeresScanMatcher ceres_scan_matcher_;
+
     int num_accumulated_ = 0;
     transform::Rigid3f first_pose_estimate_ = transform::Rigid3f::Identity();
     sensor::RangeData accumulated_range_data_;

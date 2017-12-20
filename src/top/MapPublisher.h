@@ -218,7 +218,7 @@ class Publisher
         {
             Eigen::Array2i offset;
             core::map::CellLimits limits;
-            auto grid = m.submap->probability_grid();
+            const auto& grid = m.submap->probability_grid();
             grid.ComputeCroppedLimits(&offset, &limits);
             auto to_optimized = m.pose * m.submap->local_pose().inverse();
 

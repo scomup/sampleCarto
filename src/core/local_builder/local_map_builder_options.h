@@ -20,6 +20,11 @@
 #include "src/common/lua_parameter_dictionary.h"
 #include "src/core/local_builder/motion_filter.h"
 #include "src/core/map/submaps.h"
+#include "src/core/local_builder/motion_filter.h"
+#include "src/core/scan_matching/real_time_correlative_scan_matcher.h"
+#include "src/core/scan_matching/ceres_scan_matcher.h"
+
+
 
 namespace sample_carto {
 namespace core {
@@ -37,6 +42,10 @@ class LocalMapBuilderOptions
     bool use_online_correlative_scan_matching_;
     MotionFilterOptions motion_filter_options_; 
     map::SubmapsOptions submaps_options_; 
+    scan_matching::RealTimeCorrelativeScanMatcherOptions real_time_correlative_scan_matcher_options_;
+    scan_matching::CeresScanMatcherOptions ceres_scan_matcher_options_;
+
+
 };
 
 }  // namespace core

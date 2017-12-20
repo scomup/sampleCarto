@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef SAMPLE_CARTO_MAPPING_GLOBAL_TRAJECTORY_BUILDER_H_
-#define SAMPLE_CARTO_MAPPING_GLOBAL_TRAJECTORY_BUILDER_H_
+#ifndef SAMPLE_CARTO_CORE_GLOBAL_TRAJECTORY_BUILDER_H_
+#define SAMPLE_CARTO_CORE_GLOBAL_TRAJECTORY_BUILDER_H_
 
 #include "src/sensor/point_cloud.h"
 #include "src/sensor/odometry_data.h"
 #include "src/core/local_builder/local_map_builder.h"
 #include "src/core/sparse_pose_graph/sparse_pose_graph.h"
 #include "src/common/make_unique.h"
+#include "src/common/thread_pool.h"
 
 
 namespace sample_carto {
@@ -30,9 +31,9 @@ namespace core {
 class GlobalMapManager{
  public:
   GlobalMapManager(const LocalMapBuilderOptions &local_map_builder_options, const SparsePoseGraphOptions &sparse_pose_graphe_options):
-    //thread_pool_(4),
-   local_map_builder_(local_map_builder_options)
-   ,sparse_pose_graph_(std::move(common::make_unique<SparsePoseGraph>(sparse_pose_graphe_options/* ,&thread_pool_*/))) 
+   thread_pool_(4)
+   ,local_map_builder_(local_map_builder_options)
+   ,sparse_pose_graph_(std::move(common::make_unique<SparsePoseGraph>(sparse_pose_graphe_options,&thread_pool_))) 
    {};
 
   ~GlobalMapManager(){};
@@ -46,11 +47,7 @@ class GlobalMapManager{
 
   void AddRangefinderData(const double time, const Eigen::Vector3f &origin, const sensor::PointCloud &ranges)
   {
-    auto insertion_result = local_map_builder_.AddRangeData( time, sensor::RangeData{origin, ranges, {}});
-    //std::cout<<"All pending works:" << sparse_pose_graph_2d_->constraint_builder_.GetAllPendingWork() <<std::endl;
-    //if (insertion_result != nullptr)//temp_liu
-    //  submap_ = insertion_result->insertion_submaps.front();//temp_liu
-    
+    auto insertion_result = local_map_builder_.AddRangeData( time, sensor::RangeData{origin, ranges, {}});    
     if (insertion_result == nullptr)
     {
       return;
@@ -69,16 +66,13 @@ class GlobalMapManager{
 
   std::unique_ptr<SparsePoseGraph>& sparse_pose_graph() { return sparse_pose_graph_; }
   
-  //std::shared_ptr<const map::Submap>& submap() { return submap_; } //temp_liu
-
 private:
-  //common::ThreadPool thread_pool_;
+  common::ThreadPool thread_pool_;
   LocalMapBuilder local_map_builder_;
-  //std::shared_ptr<const map::Submap> submap_;//temp_liu
   std::unique_ptr<SparsePoseGraph> sparse_pose_graph_;
 };
 
 }  // namespace core
 }  // namespace sample_carto
 
-#endif  // SAMPLE_CARTO_MAPPING_GLOBAL_TRAJECTORY_BUILDER_H_
+#endif  // SAMPLE_CARTO_CORE_GLOBAL_TRAJECTORY_BUILDER_H_

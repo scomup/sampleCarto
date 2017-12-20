@@ -32,9 +32,8 @@ LocalMapBuilder::LocalMapBuilder(const LocalMapBuilderOptions &options)
     :options_(options)
     ,motion_filter_(options.motion_filter_options_)
     ,active_submaps_(options.submaps_options_)
-    //,real_time_correlative_scan_matcher_(
-    //    options_.real_time_correlative_scan_matcher_options())
-    //,ceres_scan_matcher_(options_.ceres_scan_matcher_options())
+    ,real_time_correlative_scan_matcher_(options_.real_time_correlative_scan_matcher_options_)
+    ,ceres_scan_matcher_(options_.ceres_scan_matcher_options_)
 {
 }
 
@@ -182,14 +181,11 @@ void LocalMapBuilder::ScanMatch(
     const sensor::RangeData &gravity_aligned_range_data,
     transform::Rigid2d *const pose_observation)
 {
-    /*
 
-    std::shared_ptr<const Submap> matching_submap = active_submaps_.submaps().front();
+    std::shared_ptr<const map::Submap> matching_submap = active_submaps_.submaps().front();
     transform::Rigid2d initial_ceres_pose = pose_prediction;
 
-    //std::cout << std::endl
-    //          << "before:" << initial_ceres_pose << std::endl;
-    if (options_.use_online_correlative_scan_matching())
+    if (options_.use_online_correlative_scan_matching_)
     {
         real_time_correlative_scan_matcher_.Match(
             pose_prediction, gravity_aligned_range_data.returns,
@@ -200,7 +196,7 @@ void LocalMapBuilder::ScanMatch(
     ceres_scan_matcher_.Match(
         pose_prediction, initial_ceres_pose, gravity_aligned_range_data.returns,
         matching_submap->probability_grid(), pose_observation, &summary);
-        */
+        
 }
 
 
