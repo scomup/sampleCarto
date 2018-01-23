@@ -27,6 +27,8 @@
 #include "src/transform/transform.h"
 #include "ceres/ceres.h"
 #include "ceres/jet.h"
+#include "src/core/sparse_pose_graph/constraint.h"
+
 
 namespace sample_carto {
 namespace core {
@@ -34,7 +36,7 @@ namespace sparse_pose_graph {
 
 class SpaCostFunction {
  public:
- using Constraint = SparsePoseGraph::Constraint;
+ //using Constraint = SparsePoseGraph::Constraint;
 
   explicit SpaCostFunction(const Constraint::Pose& pose) : pose_(pose) {}
 

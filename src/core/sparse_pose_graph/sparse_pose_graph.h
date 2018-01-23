@@ -33,6 +33,12 @@
 #include "src/sensor/odometry_data.h"
 #include "src/sensor/range_data.h"
 #include "src/common/thread_pool.h"
+#include "src/core/sparse_pose_graph/optimization_problem.h"
+#include "src/core/sparse_pose_graph/constraint_builder.h"
+#include "src/core/sparse_pose_graph/constraint.h"
+#include "src/core/sparse_pose_graph/optimization_problem_options.h"
+#include "src/core/sparse_pose_graph/constraint_builder_options.h"
+
 
 namespace sample_carto
 {
@@ -47,11 +53,10 @@ public:
   //*options.mutable_constraint_builder_options() =
   //    sparse_pose_graph::CreateConstraintBuilderOptions(
   //        parameter_dictionary->GetDictionary("constraint_builder").get());
+  sparse_pose_graph::ConstraintBuilderOptions constraint_builder_options_;
   double matcher_translation_weight_;
   double matcher_rotation_weight_;
-  //*options.mutable_optimization_problem_options() =
-  //    sparse_pose_graph::CreateOptimizationProblemOptions(
-  //        parameter_dictionary->GetDictionary("optimization_problem").get());
+  sparse_pose_graph::OptimizationProblemOptions optimization_problem_options_;
   uint max_num_final_iterations_;
   double global_sampling_ratio_;
   bool log_residual_histograms_;
@@ -60,34 +65,6 @@ public:
 class SparsePoseGraph
 {
 public:
-  // A "constraint" as in the paper by Konolige, Kurt, et al. "Efficient sparse
-  // pose adjustment for 2d mapping." Intelligent Robots and Systems (IROS),
-  // 2010 IEEE/RSJ International Conference on (pp. 22--29). IEEE, 2010.
-  struct Constraint
-  {
-    struct Pose
-    {
-      transform::Rigid3d zbar_ij;
-      double translation_weight;
-      double rotation_weight;
-    };
-
-    int submap_id; // 'i' in the paper.
-    int node_id;   // 'j' in the paper.
-
-    // Pose of the scan 'j' relative to submap 'i'.
-    Pose pose;
-
-    // Differentiates between intra-submap (where scan 'j' was inserted into
-    // submap 'i') and inter-submap constraints (where scan 'j' was not inserted
-    // into submap 'i').
-    enum Tag
-    {
-      INTRA_SUBMAP,
-      INTER_SUBMAP
-    } tag;
-  };
-
   struct SubmapDataWithPose
   {
     std::shared_ptr<const map::Submap> submap;
@@ -175,6 +152,16 @@ private:
   std::unique_ptr<FixedRatioSampler> localization_samplers_;
   std::map<int, transform::Rigid2d> optimized_submap_transforms_;
   std::unique_ptr<std::deque<std::function<void()>>> work_queue_;
+  //sparse_pose_graph::OptimizationProblem optimization_problem_;
+  sparse_pose_graph::OptimizationProblem optimization_problem_;
+  sparse_pose_graph::ConstraintBuilder constraint_builder_;
+
+  //OptimizationProblem a;
+
+
+  //sparse_pose_graph::ConstraintBuilder constraint_builder_;
+
+
 };
 
 } // namespace core

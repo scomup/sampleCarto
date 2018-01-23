@@ -21,6 +21,7 @@ namespace core {
 namespace sparse_pose_graph {
 
 void OptimizationProblemOptions::Create(common::LuaParameterDictionary* const parameter_dictionary) {
+      huber_scale_ = parameter_dictionary->GetDouble("huber_scale");
       acceleration_weight_ = parameter_dictionary->GetDouble("acceleration_weight");
       rotation_weight_ = parameter_dictionary->GetDouble("rotation_weight");
       consecutive_scan_translation_penalty_factor_ = parameter_dictionary->GetDouble("consecutive_scan_translation_penalty_factor");
@@ -29,6 +30,9 @@ void OptimizationProblemOptions::Create(common::LuaParameterDictionary* const pa
       fixed_frame_pose_rotation_weight_ = parameter_dictionary->GetDouble("fixed_frame_pose_rotation_weight");
       log_solver_summary_ = parameter_dictionary->GetBool("log_solver_summary");
       ceres_solver_options_.Create(parameter_dictionary->GetDictionary("ceres_solver_options").get());
+
+
+
 }
 
 }  // namespace sparse_pose_graph

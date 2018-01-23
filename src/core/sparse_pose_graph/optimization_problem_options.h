@@ -28,6 +28,7 @@ class OptimizationProblemOptions
 {
 public:
   void Create(common::LuaParameterDictionary *const parameter_dictionary);
+      double huber_scale_;
       double acceleration_weight_;
       double rotation_weight_;
       double consecutive_scan_translation_penalty_factor_;

@@ -162,7 +162,7 @@ void ConstraintBuilder::ComputeConstraint(
     const int node_id, bool match_full_submap,
     const Node::Data* const constant_data,
     const transform::Rigid2d& initial_relative_pose,
-    std::unique_ptr<ConstraintBuilder::Constraint>* constraint) {
+    std::unique_ptr<Constraint>* constraint) {
   const transform::Rigid2d initial_pose =
       ComputeSubmapPose(*submap) * initial_relative_pose;
   const SubmapScanMatcher* const submap_scan_matcher =

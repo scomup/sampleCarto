@@ -38,9 +38,6 @@ namespace core
 namespace sparse_pose_graph
 {
 
-namespace
-{
-
 // Converts a pose into the 3 optimization variable format used for Ceres:
 // translation in x and y, followed by the rotation angle representing the
 // orientation.
@@ -49,20 +46,18 @@ std::array<double, 3> FromPose(const transform::Rigid2d &pose)
   return {{pose.translation().x(), pose.translation().y(),
            pose.normalized_angle()}};
 }
-
 // Converts a pose as represented for Ceres back to an transform::Rigid2d pose.
 transform::Rigid2d ToPose(const std::array<double, 3> &values)
 {
   return transform::Rigid2d({values[0], values[1]}, values[2]);
 }
 
-} // namespace
 
-OptimizationProblem::OptimizationProblem(
-    const OptimizationProblemOptions &options)
-    : options_(options) {}
+OptimizationProblem::OptimizationProblem(const OptimizationProblemOptions& options)
+    : options_(options) {};
 
-OptimizationProblem::~OptimizationProblem() {}
+
+OptimizationProblem::~OptimizationProblem() {};
 
 void OptimizationProblem::AddOdometerData(const sensor::OdometryData &odometry_data)
 {
@@ -77,20 +72,15 @@ void OptimizationProblem::AddNode(
   ++trajectory_data_.next_node_index;
 }
 
+
 void OptimizationProblem::TrimNode(const int node_id)
 {
-  //auto& node_data = node_data_.at(node_id.trajectory_id);
-  //CHECK(node_data.erase(node_id.node_index));
-  //if (!node_data.empty() ) {
-  //  auto node_it = node_data.begin();
-  //}
+  CHECK(node_data_.erase(node_id));
 }
 
 void OptimizationProblem::AddSubmap(const transform::Rigid2d &submap_pose)
 {
-
-  submap_pose_data_.emplace(trajectory_data_.next_submap_index,
-                       SubmapPoseData{submap_pose});
+  submap_pose_data_.emplace(trajectory_data_.next_submap_index, submap_pose);
   ++trajectory_data_.next_submap_index;
 }
 
@@ -104,7 +94,9 @@ void OptimizationProblem::SetMaxNumIterations(const int32 max_num_iterations)
   options_.ceres_solver_options_.max_num_iterations_ = max_num_iterations;
 }
 
-void OptimizationProblem::Solve(const std::vector<Constraint> &constraints)
+
+
+void OptimizationProblem::Solve(const std::vector<Constraint>& constraints, const std::set<int>& frozen_trajectories)
 {
   if (node_data_.empty())
   {
@@ -123,31 +115,33 @@ void OptimizationProblem::Solve(const std::vector<Constraint> &constraints)
 
   for (const auto &index_submap_data : submap_pose_data_)
   {
-    const int submap_index = index_submap_data.first;
-    const SubmapPoseData &submap_data = index_submap_data.second;
+   const int submap_index = index_submap_data.first;
+    const transform::Rigid2d &submap_pose = index_submap_data.second;
 
-    C_submaps.emplace(submap_index,
-                      FromPose(submap_data.pose));
-    problem.AddParameterBlock(
-        C_submaps.at(submap_index).data(), 3);
+    C_submaps.emplace(submap_index, FromPose(submap_pose));
+    problem.AddParameterBlock(C_submaps.at(submap_index).data(), 3);
     if (first_submap)
     {
       first_submap = false;
       // Fix the pose of the first submap or all submaps of a frozen
       // trajectory.
-      problem.SetParameterBlockConstant(
-          C_submaps.at(submap_index).data());
+      problem.SetParameterBlockConstant(C_submaps.at(submap_index).data());
     }
   }
-
+  
   for (const auto &index_node_data : node_data_)
   {
     const int node_index = index_node_data.first;
     const NodeData &node_data = index_node_data.second;
+    const bool frozen = frozen_trajectories.count(node_index) != 0;
     C_nodes.emplace(node_index, FromPose(node_data.pose));
     problem.AddParameterBlock(C_nodes.at(node_index).data(),3);
+    if (frozen)
+    {
+      problem.SetParameterBlockConstant(C_nodes.at(node_index).data());
+    }
   }
-
+  
   // Add cost functions for intra- and inter-submap constraints.
   for (const Constraint &constraint : constraints)
   {
@@ -163,75 +157,68 @@ void OptimizationProblem::Solve(const std::vector<Constraint> &constraints)
             new SpaCostFunction(constraint.pose)),
         // Only loop closure constraints should have a loss function.
         constraint.tag == Constraint::INTER_SUBMAP
-            ? new ceres::HuberLoss(options_.huber_scale())
+            ? new ceres::HuberLoss(options_.huber_scale_)
             : nullptr,
-        C_submaps.at(constraint.submap_id.submap_index).data(),
-        C_nodes.at(constraint.node_id.node_index).data());
+        C_submaps.at(constraint.submap_id).data(),
+        C_nodes.at(constraint.node_id).data());
   }
 
-  // Add penalties for violating odometry or changes between consecutive scans
+  // Add penalties for violating odometry or changes between consecutive nodes
   // if odometry is not available.
-  
-    if (node_data_.empty())
+
+  for (auto node_it = node_data_.begin();;)
+  {
+    const int node_index = node_it->first;
+    const NodeData &node_data = node_it->second;
+    ++node_it;
+    if (node_it == node_data_.end())
+    {
+      break;
+    }
+
+    const int next_node_index = node_it->first;
+    const NodeData &next_node_data = node_it->second;
+
+    if (next_node_index != node_index + 1)
     {
       continue;
     }
 
-    for (auto node_it = node_data_.begin();;)
-    {
-      const int node_index = node_it->first;
-      const NodeData &node_data = node_it->second;
-      ++node_it;
-      if (node_it == node_data_.end())
-      {
-        break;
-      }
-
-      const int next_node_index = node_it->first;
-      const NodeData &next_node_data = node_it->second;
-
-      if (next_node_index != node_index + 1)
-      {
-        continue;
-      }
-
-      const bool odometry_available =
-          trajectory_id < odometry_data_.size() &&
-          odometry_data_.Has(
-              node_data_[next_node_index].time) &&
-          odometry_data_.Has(
-              node_data_[node_index].time);
-      const transform::Rigid3d relative_pose =
-          odometry_available
-              ? odometry_data_.Lookup(node_data.time).inverse() *
-                    odometry_data_.Lookup(next_node_data.time)
-              : transform::Embed3D(node_data.initial_pose.inverse() *
-                                   next_node_data.initial_pose);
-      problem.AddResidualBlock(
-          new ceres::AutoDiffCostFunction<SpaCostFunction, 3, 3, 3>(
-              new SpaCostFunction(Constraint::Pose{
-                  relative_pose,
-                  options_.consecutive_scan_translation_penalty_factor(),
-                  options_.consecutive_scan_rotation_penalty_factor()})),
-          nullptr /* loss function */,
-          C_nodes[node_index].data(),
-          C_nodes[next_node_index].data());
-    }
+    const bool odometry_available = odometry_data_.Has(node_data_[next_node_index].time) && odometry_data_.Has(node_data_[node_index].time);
+    const transform::Rigid3d relative_pose =
+        odometry_available
+            ? odometry_data_.Lookup(node_data.time).inverse() *
+                  odometry_data_.Lookup(next_node_data.time)
+            : transform::Embed3D(node_data.initial_pose.inverse() *
+                                 next_node_data.initial_pose);
+    problem.AddResidualBlock(
+        new ceres::AutoDiffCostFunction<SpaCostFunction, 3, 3, 3>(
+            new SpaCostFunction(Constraint::Pose{
+                relative_pose,
+                options_.consecutive_scan_translation_penalty_factor_,
+                options_.consecutive_scan_rotation_penalty_factor_})),
+        nullptr,
+        C_nodes[node_index].data(),
+        C_nodes[next_node_index].data());
+  }
   
-
   // Solve.
   ceres::Solver::Summary summary;
-  ceres::Solve(
-      common::CreateCeresSolverOptions(options_.ceres_solver_options()),
-      &problem, &summary);
-  if (options_.log_solver_summary())
+  ceres::Solver::Options options;
+  options.use_nonmonotonic_steps = options_.ceres_solver_options_.use_nonmonotonic_steps_;
+  options.max_num_iterations = options_.ceres_solver_options_.max_num_iterations_;
+  options.num_threads = options_.ceres_solver_options_.num_threads_;
+
+  ceres::Solve(options, &problem, &summary);
+  
+  if (options_.log_solver_summary_)
   {
     LOG(INFO) << summary.FullReport();
   }
 
   for (auto &index_submap_data : submap_pose_data_)
   {
-    index_submap_data.second.pose = ToPose(C_submaps.at(index_submap_data.first));
+    index_submap_data.second = ToPose(C_submaps.at(index_submap_data.first));
   }
 
   for (auto &index_node_data : node_data_)
@@ -240,15 +227,19 @@ void OptimizationProblem::Solve(const std::vector<Constraint> &constraints)
   }
 }
 
+
 const std::map<int, NodeData> &OptimizationProblem::node_data()const
 {
   return node_data_;
 }
-/*
-const std::map<int, transform::Rigid2d> &OptimizationProblem::submap_data()const
+
+
+const std::map<int, transform::Rigid2d> &OptimizationProblem::submap_data()
 {
   return submap_pose_data_;
-}*/
+}
+
+
 
 } // namespace sparse_pose_graph
 } // namespace core
