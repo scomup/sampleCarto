@@ -60,7 +60,7 @@ class GlobalMapManager{
 
   void AddSensorData(const sensor::OdometryData& odometry_data){
     local_map_builder_.AddOdometerData(odometry_data);
-    sparse_pose_graph_->AddOdometerData(0, odometry_data);
+    sparse_pose_graph_->AddOdometerData(odometry_data);
   }
 
 

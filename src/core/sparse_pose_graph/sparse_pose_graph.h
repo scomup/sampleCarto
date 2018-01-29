@@ -39,7 +39,6 @@
 #include "src/core/sparse_pose_graph/optimization_problem_options.h"
 #include "src/core/sparse_pose_graph/constraint_builder_options.h"
 
-
 namespace sample_carto
 {
 namespace core
@@ -131,8 +130,7 @@ public:
       const transform::Rigid3d &pose,
       const std::vector<std::shared_ptr<const map::Submap>> &insertion_submaps);
   //void AddImuData(int trajectory_id, const sensor::ImuData& imu_data);
-  void AddOdometerData(int trajectory_id,
-                       const sensor::OdometryData &odometry_data);
+  void AddOdometerData(const sensor::OdometryData &odometry_data);
 
 
 SubmapDataWithPose GetSubmapData(const int submap_id);
@@ -141,6 +139,9 @@ std::vector<SubmapDataWithPose> GetAllSubmapData();
 
 
 private:
+  std::vector<int> GrowSubmapTransformsAsNeeded(const std::vector<std::shared_ptr<const map::Submap>>& insertion_submaps);
+  void ComputeConstraintsForScan(std::vector<std::shared_ptr<const map::Submap>> insertion_submaps,const bool newly_finished_submap, const transform::Rigid2d &pose);
+
   SubmapDataWithPose GetSubmapDataUnderLock(const int submap_id);
     // Handles a new work item.
   void AddWorkItem(const std::function<void()>& work_item);
@@ -155,6 +156,10 @@ private:
   //sparse_pose_graph::OptimizationProblem optimization_problem_;
   sparse_pose_graph::OptimizationProblem optimization_problem_;
   sparse_pose_graph::ConstraintBuilder constraint_builder_;
+  // Data that are currently being shown.
+  std::map<int, Node> trajectory_nodes_;
+  int num_trajectory_nodes_ = 0;
+
 
   //OptimizationProblem a;
 
