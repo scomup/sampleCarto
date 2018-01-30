@@ -141,8 +141,13 @@ std::vector<SubmapDataWithPose> GetAllSubmapData();
 private:
   std::vector<int> GrowSubmapTransformsAsNeeded(const std::vector<std::shared_ptr<const map::Submap>>& insertion_submaps);
   void ComputeConstraintsForScan(std::vector<std::shared_ptr<const map::Submap>> insertion_submaps,const bool newly_finished_submap, const transform::Rigid2d &pose);
-
+  void ComputeConstraint(const int node_id, const int submap_id);
   SubmapDataWithPose GetSubmapDataUnderLock(const int submap_id);
+  void ComputeConstraintsForOldScans(const int submap_id);
+  // Registers the callback to run the optimization once all constraints have
+  // been computed, that will also do all work that queue up in 'work_queue_'.
+  void HandleWorkQueue();
+
     // Handles a new work item.
   void AddWorkItem(const std::function<void()>& work_item);
 
@@ -150,15 +155,23 @@ private:
   common::Mutex mutex_;
   //std::vector<std::map<int, transform::Rigid2d>> submap_data_;
   std::vector<SubmapData> submap_data_;
-  std::unique_ptr<FixedRatioSampler> localization_samplers_;
   std::map<int, transform::Rigid2d> optimized_submap_transforms_;
   std::unique_ptr<std::deque<std::function<void()>>> work_queue_;
   //sparse_pose_graph::OptimizationProblem optimization_problem_;
   sparse_pose_graph::OptimizationProblem optimization_problem_;
   sparse_pose_graph::ConstraintBuilder constraint_builder_;
+  std::vector<sparse_pose_graph::Constraint> constraints_;
   // Data that are currently being shown.
-  std::map<int, Node> trajectory_nodes_;
-  int num_trajectory_nodes_ = 0;
+  std::map<int, Node> nodes_;
+  int num_nodes_ = 0;
+    // We globally localize a fraction of the scans from each trajectory.
+  std::unique_ptr<FixedRatioSampler> localization_samplers_;
+  // Number of scans added since last loop closure.
+  int num_scans_since_last_loop_closure_  = 0;
+    // Whether the optimization has to be run before more data is added.
+  bool run_loop_closure_ = false;
+
+
 
 
   //OptimizationProblem a;
