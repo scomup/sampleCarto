@@ -96,7 +96,7 @@ void OptimizationProblem::SetMaxNumIterations(const int32 max_num_iterations)
 
 
 
-void OptimizationProblem::Solve(const std::vector<Constraint>& constraints, const std::set<int>& frozen_trajectories)
+void OptimizationProblem::Solve(const std::vector<Constraint>& constraints)
 {
   if (node_data_.empty())
   {
@@ -133,13 +133,13 @@ void OptimizationProblem::Solve(const std::vector<Constraint>& constraints, cons
   {
     const int node_index = index_node_data.first;
     const NodeData &node_data = index_node_data.second;
-    const bool frozen = frozen_trajectories.count(node_index) != 0;
+    //const bool frozen = frozen_trajectories.count(node_index) != 0;
     C_nodes.emplace(node_index, FromPose(node_data.pose));
     problem.AddParameterBlock(C_nodes.at(node_index).data(),3);
-    if (frozen)
-    {
-      problem.SetParameterBlockConstant(C_nodes.at(node_index).data());
-    }
+    //if (frozen)
+    //{
+    //  problem.SetParameterBlockConstant(C_nodes.at(node_index).data());
+    //}
   }
   
   // Add cost functions for intra- and inter-submap constraints.

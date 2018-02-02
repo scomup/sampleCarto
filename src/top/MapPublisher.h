@@ -221,6 +221,8 @@ class Publisher
             const auto& grid = m.submap->probability_grid();
             grid.ComputeCroppedLimits(&offset, &limits);
             auto to_optimized = m.pose * m.submap->local_pose().inverse();
+            std::cout<<"old:"<<m.pose<<"\n";
+            std::cout<<"new:"<<m.submap->local_pose()<<"\n";
 
             for (const Eigen::Array2i &xy_index : core::map::XYIndexRangeIterator(limits))
             {

@@ -85,7 +85,9 @@ public:
   SparsePoseGraph(const SparsePoseGraph &) = delete;
   SparsePoseGraph &operator=(const SparsePoseGraph &) = delete;
   SparsePoseGraph(const SparsePoseGraphOptions &options, common::ThreadPool* thread_pool);
+    // Computes optimized poses.
 
+  void RunFinalOptimization();
   // Freezes a trajectory. Poses in this trajectory will not be optimized.
   //virtual void FreezeTrajectory(int trajectory_id) = 0;
 
@@ -106,11 +108,11 @@ public:
   // virtual std::vector<std::vector<int>> GetConnectedTrajectories();
 
   // Return the number of submaps for the given 'trajectory_id'.
-  //virtual int num_submaps(int trajectory_id) = 0;
+  int num_submaps();
 
   // Returns the current optimized transform and submap itself for the given
   // 'submap_id'.
-  //virtual SubmapData GetSubmapData(const SubmapId& submap_id) = 0;
+  SubmapDataWithPose GetSubmapData(const int submap_id);
 
   // Returns data for all Submaps by trajectory.
   //virtual std::vector<std::vector<SubmapData>> GetAllSubmapData() = 0;
@@ -118,13 +120,13 @@ public:
   // Returns the transform converting data in the local map frame (i.e. the
   // continuous, non-loop-closed frame) into the global map frame (i.e. the
   // discontinuous, loop-closed frame).
-  //virtual transform::Rigid3d GetLocalToGlobalTransform(int trajectory_id) = 0;
+  transform::Rigid3d GetLocalToGlobalTransform();
 
   // Returns the current optimized trajectories.
   //virtual std::vector<std::vector<TrajectoryNode>> GetTrajectoryNodes() = 0;
 
   // Returns the collection of constraints.
-  //virtual std::vector<Constraint> constraints() = 0;
+  std::vector<sparse_pose_graph::Constraint> constraints();
   void AddScan(
       std::shared_ptr<const Node::Data> constant_data,
       const transform::Rigid3d &pose,
@@ -133,10 +135,9 @@ public:
   void AddOdometerData(const sensor::OdometryData &odometry_data);
 
 
-SubmapDataWithPose GetSubmapData(const int submap_id);
 
 std::vector<SubmapDataWithPose> GetAllSubmapData();
-
+std::map<int, Node> GetNodes();
 
 private:
   std::vector<int> GrowSubmapTransformsAsNeeded(const std::vector<std::shared_ptr<const map::Submap>>& insertion_submaps);
@@ -147,6 +148,17 @@ private:
   // Registers the callback to run the optimization once all constraints have
   // been computed, that will also do all work that queue up in 'work_queue_'.
   void HandleWorkQueue();
+  // Waits until we caught up (i.e. nothing is waiting to be scheduled), and
+  // all computations have finished.
+  void WaitForAllComputations();
+  // Runs the optimization. Callers have to make sure, that there is only one
+  // optimization being run at a time.
+  void RunOptimization();
+  // Computes the local to global map frame transform based on the given
+  // optimized 'submap_transforms'.
+  transform::Rigid3d ComputeLocalToGlobalTransform(const std::map<int, transform::Rigid2d> &submap_transforms) const;
+
+  void RunOptimizationWithNewConstraints(const sparse_pose_graph::ConstraintBuilder::Result &result);
 
     // Handles a new work item.
   void AddWorkItem(const std::function<void()>& work_item);

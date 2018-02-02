@@ -72,7 +72,7 @@ class OptimizationProblem {
   // Computes the optimized poses.
   //void Solve(const std::set<int>& frozen_trajectories);
   // Optimizes the global poses.
-  void Solve(const std::vector<Constraint>& constraints, const std::set<int>& frozen_trajectories);
+  void Solve(const std::vector<Constraint>& constraints);
 
   const std::map<int, NodeData>& node_data() const;
   const std::map<int, transform::Rigid2d>& submap_data();
