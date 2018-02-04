@@ -27,7 +27,7 @@ namespace sample_carto
 namespace common
 {
 
-constexpr char kConfigurationFilesDirectory[] = "/usr/local/share/cartographer/configuration_files";
+constexpr char kConfigurationFilesDirectory[] = "";
 constexpr char kSourceDirectory[] = "";
 
 FileResolver::FileResolver(

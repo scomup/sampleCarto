@@ -19,8 +19,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "scample_carto");
 	ros::start();
 
-    top::BagReader bagReader("/home/liu/bag/kusatsu/lg_kusatsu_C5_1.bag", "/scan", "/odom");
-    auto file_resolver = common::make_unique<common::FileResolver>(std::vector<string>{std::string("/home/liu/catkin_ws_carto/src/cartographer_ros/cartographer_ros/configuration_files")});
+    top::BagReader bagReader("../test_data/h1.bag", "scan", "odom");
+    auto file_resolver = common::make_unique<common::FileResolver>(std::vector<string>{std::string("../configuration_files")});
     const string code = file_resolver->GetFileContentOrDie("test.lua");
     common::LuaParameterDictionary parameter_dictionary(code, std::move(file_resolver));
     core::LocalMapBuilderOptions local_map_builder_options;
@@ -38,10 +38,16 @@ int main(int argc, char **argv)
 
     while (ros::ok())
     {
+        if (bagReader.scan_raw_datas_.size() == 0 || bagReader.odom_raw_datas_.size() == 0)
+        {
+            std::cout<<"finished!\n";
+        }
         auto scan = bagReader.scan_raw_datas_.front();
         auto odom = bagReader.odom_raw_datas_.front();
         if (scan.header.stamp < odom.header.stamp)
         {
+            //static int c=0;
+            //printf("%d\n",c++);
             auto scan_ptr = boost::make_shared<const ::sensor_msgs::LaserScan>(scan);
             sensor_bridge.HandleLaserScanMessage(scan_ptr);
             bagReader.scan_raw_datas_.pop_front();
