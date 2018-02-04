@@ -60,7 +60,7 @@ class Publisher
         point.z = vector3d.z();
         return point;
     }
-/*
+
     visualization_msgs::MarkerArray GetConstraintList()
     {
         visualization_msgs::MarkerArray constraint_list;
@@ -92,7 +92,7 @@ class Publisher
         residual_inter_marker.ns = "Inter residuals";
         residual_inter_marker.pose.position.z = 0.1;
 
-        const auto all_trajectory_nodes = p_global_trajectory_builder_->sparse_pose_graph()->GetTrajectoryNodes();
+        const auto all_trajectory_nodes = p_global_trajectory_builder_->sparse_pose_graph()->GetNodes();
         const auto all_submap_data = p_global_trajectory_builder_ -> sparse_pose_graph()->GetAllSubmapData();
         const auto constraints = p_global_trajectory_builder_ -> sparse_pose_graph()->constraints();
 
@@ -100,7 +100,7 @@ class Publisher
         {
             visualization_msgs::Marker *constraint_marker, *residual_marker;
             std_msgs::ColorRGBA color_constraint, color_residual;
-            if (constraint.tag == cartographer::mapping::SparsePoseGraph::Constraint::INTRA_SUBMAP)
+            if (constraint.tag == sample_carto::core::sparse_pose_graph::Constraint::INTRA_SUBMAP)
             {
                 constraint_marker = &constraint_intra_marker;
                 residual_marker = &residual_intra_marker;
@@ -109,9 +109,9 @@ class Publisher
                 // to avoid having identical colors as trajectories.
 
                 color_constraint.r = 1.f;
-                color_constraint.g = ( (constraint.submap_id.submap_index+3) % 5) /5.f;
-                color_constraint.b = ( (constraint.submap_id.submap_index+0) % 5) /5.f;
-                color_constraint.a = ( (constraint.submap_id.submap_index+0) % 5) /5.f;
+                color_constraint.g = 0.f;
+                color_constraint.b = 0.f;
+                color_constraint.a = 0.f;
 
                 color_residual.a = 1.0;
                 color_residual.r = 1.0;
@@ -130,30 +130,22 @@ class Publisher
 
             for (int i = 0; i < 2; ++i)
             {
-                //constraint_marker->colors.push_back(color_constraint);
+                constraint_marker->colors.push_back(color_constraint);
                 residual_marker->colors.push_back(color_residual);
             }
 
-            const auto &submap_data =
-                all_submap_data[constraint.submap_id.trajectory_id]
-                               [constraint.submap_id.submap_index];
+            const auto &submap_data = all_submap_data[constraint.submap_id];
             const auto &submap_pose = submap_data.pose;
-            const auto &trajectory_node_pose =
-                all_trajectory_nodes[constraint.node_id.trajectory_id]
-                                    [constraint.node_id.node_index]
-                                        .pose;
-            const cartographer::transform::Rigid3d constraint_pose =
-                submap_pose * constraint.pose.zbar_ij;
-//
-            //constraint_marker->points.push_back(
-            //    ToGeometryMsgPoint(submap_pose.translation()));
-            //constraint_marker->points.push_back(
-            //    ToGeometryMsgPoint(constraint_pose.translation()));
+            const auto &trajectory_node_pose = all_trajectory_nodes.at(constraint.node_id).pose;
+            const sample_carto::transform::Rigid3d constraint_pose = submap_pose * constraint.pose.zbar_ij;
 
-            residual_marker->points.push_back(
+            constraint_marker->points.push_back(
+                ToGeometryMsgPoint(submap_pose.translation()));
+            constraint_marker->points.push_back(
                 ToGeometryMsgPoint(constraint_pose.translation()));
-            residual_marker->points.push_back(
-                ToGeometryMsgPoint(trajectory_node_pose.translation()));
+
+            residual_marker->points.push_back(ToGeometryMsgPoint(constraint_pose.translation()));
+            residual_marker->points.push_back(ToGeometryMsgPoint(trajectory_node_pose.translation()));
         }
 
         constraint_list.markers.push_back(constraint_intra_marker);
@@ -166,19 +158,19 @@ class Publisher
     visualization_msgs::MarkerArray GetTrajectoryNodeList()
     {
         visualization_msgs::MarkerArray trajectory_node_list;
-        const auto nodes = p_global_trajectory_builder_->sparse_pose_graph()->GetTrajectoryNodes();
+        const auto nodes = p_global_trajectory_builder_->sparse_pose_graph()->GetNodes();
         visualization_msgs::Marker marker = CreateTrajectoryMarker(0, "map");
         if (nodes.size() == 0)
             return trajectory_node_list;
-        for (const auto &node_id_data : nodes[0])
+        for (const auto &node_id_data : nodes)
         {
-            if (node_id_data.constant_data == nullptr)
+            if (node_id_data.second.constant_data == nullptr)
             {
                 PushAndResetLineMarker(&marker, &trajectory_node_list.markers);
                 continue;
             }
             const ::geometry_msgs::Point node_point =
-                ToGeometryMsgPoint(node_id_data.pose.translation());
+                ToGeometryMsgPoint(node_id_data.second.pose.translation());
             marker.points.push_back(node_point);
             // Work around the 16384 point limit in RViz by splitting the
             // trajectory into multiple markers.
@@ -192,7 +184,6 @@ class Publisher
         PushAndResetLineMarker(&marker, &trajectory_node_list.markers);
         return trajectory_node_list;
     };
-    */
 
     void makeMap()
     {
@@ -221,8 +212,6 @@ class Publisher
             const auto& grid = m.submap->probability_grid();
             grid.ComputeCroppedLimits(&offset, &limits);
             auto to_optimized = m.pose * m.submap->local_pose().inverse();
-            std::cout<<"old:"<<m.pose<<"\n";
-            std::cout<<"new:"<<m.submap->local_pose()<<"\n";
 
             for (const Eigen::Array2i &xy_index : core::map::XYIndexRangeIterator(limits))
             {
@@ -264,10 +253,10 @@ class Publisher
         while (ros::ok())
         {
             makeMap();
-            //auto markerArray = GetTrajectoryNodeList();
-            //auto constraintArray = GetConstraintList();
-            //trajectory_node_list_publisher_.publish(markerArray);
-            //constraint_list_publisher_.publish(constraintArray);
+            auto markerArray = GetTrajectoryNodeList();
+            auto constraintArray = GetConstraintList();
+            trajectory_node_list_publisher_.publish(markerArray);
+            constraint_list_publisher_.publish(constraintArray);
             mapPublisher_.publish(map_.map);
             ros::spinOnce();
             r.sleep();

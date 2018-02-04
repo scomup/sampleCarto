@@ -141,12 +141,18 @@ void SparsePoseGraph::AddScan(
 
 SparsePoseGraph::SubmapDataWithPose SparsePoseGraph::GetSubmapDataUnderLock(const int submap_id)
 {
-  if (submap_data_[submap_id].state == SubmapState::kTrimmed)
+  if (submap_data_.at(submap_id).state == SubmapState::kTrimmed)
   {
     return {};
   }
-  auto submap = submap_data_[submap_id].submap;
-  return {submap, submap->local_pose()};
+  auto submap = submap_data_.at(submap_id).submap;
+  if (submap_id < static_cast<int>(optimized_submap_transforms_.size()))
+  {
+    // We already have an optimized pose.
+    return {submap, transform::Embed3D(optimized_submap_transforms_.at(submap_id))};
+  }
+  // We have to extrapolate.
+  return {submap, ComputeLocalToGlobalTransform(optimized_submap_transforms_) * submap->local_pose()};
 }
 
 SparsePoseGraph::SubmapDataWithPose SparsePoseGraph::GetSubmapData(const int submap_id)

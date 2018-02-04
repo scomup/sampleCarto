@@ -86,7 +86,7 @@ class PrecomputationGrid
     {
         return map::kMinProbability +
                value *
-                   ((map::kMinProbability - map::kMinProbability) / 255.f);
+                   ((map::kMaxProbability - map::kMinProbability) / 255.f);
     }
 
   private:

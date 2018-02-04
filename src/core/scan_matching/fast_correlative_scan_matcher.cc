@@ -175,7 +175,7 @@ uint8 PrecomputationGrid::ComputeCellValue(const float probability) const
 {
   const int cell_value = common::RoundToInt(
       (probability - map::kMinProbability) *
-      (255.f / (map::kMinProbability - map::kMinProbability)));
+      (255.f / (map::kMaxProbability - map::kMinProbability)));
   CHECK_GE(cell_value, 0);
   CHECK_LE(cell_value, 255);
   return cell_value;
