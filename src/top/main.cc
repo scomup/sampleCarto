@@ -18,9 +18,9 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "scample_carto");
 	ros::start();
-
-    top::BagReader bagReader("../test_data/h1.bag", "scan", "odom");
-    auto file_resolver = common::make_unique<common::FileResolver>(std::vector<string>{std::string("../configuration_files")});
+    top::BagReader bagReader("/home/liu/bag/tokyo/lg_1.bag", "/scan", "/odom");
+    //top::BagReader bagReader("/home/liu/bag/kusatsu/lg_kusatsu_C5_1.bag", "/scan", "/odom");
+    auto file_resolver = common::make_unique<common::FileResolver>(std::vector<string>{std::string("/home/liu/workspace/sampleCarto/configuration_files")});
     const string code = file_resolver->GetFileContentOrDie("test.lua");
     common::LuaParameterDictionary parameter_dictionary(code, std::move(file_resolver));
     core::LocalMapBuilderOptions local_map_builder_options;

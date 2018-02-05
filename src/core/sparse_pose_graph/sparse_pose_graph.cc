@@ -351,45 +351,9 @@ void SparsePoseGraph::HandleWorkQueue()
 {
 
   std::function<void(const sparse_pose_graph::ConstraintBuilder::Result &)> finish_task =
-    std::bind(&SparsePoseGraph::RunOptimizationWithNewConstraints, this, std::placeholders::_1);
-
-  //// WhenDone will schedule a task, this task will be executed after  
+      std::bind(&SparsePoseGraph::RunOptimizationWithNewConstraints, this, std::placeholders::_1);
+  // WhenDone will schedule a task, this task will be executed after than the computation of constraint.
   constraint_builder_.WhenDone(finish_task);
-  /*
-    constraint_builder_.WhenDone(
-      [this](const sparse_pose_graph::ConstraintBuilder::Result &result) {
-        {
-          common::MutexLocker locker(&mutex_);
-          constraints_.insert(constraints_.end(), result.begin(), result.end());
-        }
-        RunOptimization();
-
-        // Update the trajectory connectivity structure with the new
-        // constraints.
-        for (const sparse_pose_graph::Constraint &constraint : result)
-        {
-          CHECK_EQ(constraint.tag,
-                   sparse_pose_graph::Constraint::INTER_SUBMAP);
-        }
-
-        common::MutexLocker locker(&mutex_);
-        num_scans_since_last_loop_closure_ = 0;
-        run_loop_closure_ = false;
-        while (!run_loop_closure_)
-        {
-          if (work_queue_->empty())
-          {
-            LOG(INFO) << "We caught up. Hooray!";
-            work_queue_.reset();
-            return;
-          }
-          work_queue_->front()();
-          work_queue_->pop_front();
-        }
-        // We have to optimize again.
-        HandleWorkQueue();
-      });*/
-
 }
 
 void SparsePoseGraph::WaitForAllComputations()
@@ -498,6 +462,7 @@ std::map<int, Node> SparsePoseGraph::GetNodes()
   common::MutexLocker locker(&mutex_);
   return nodes_;
 }
+
 
 std::vector<sparse_pose_graph::Constraint> SparsePoseGraph::constraints()
 {

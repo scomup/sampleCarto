@@ -1,6 +1,6 @@
 # sampleCarto
 
-sampleCarto is a simplified version of cartograher(https://github.com/googlecartographer), it is used for studying LiDAR-SLAM.
+sampleCarto is a simplified version of the cartograher(https://github.com/googlecartographer), it is used for studying LiDAR-SLAM.
 (Much easier to understand than cartographer.)
 
 The sampleCarto takes in a laser scans and wheel odometry, and outputs map.

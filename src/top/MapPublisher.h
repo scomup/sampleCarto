@@ -4,6 +4,8 @@
 #include "visualization_msgs/MarkerArray.h"
 #include <src/core/global_manager/global_map_manager.h>
 
+
+
 namespace sample_carto {
 
 namespace top {
@@ -12,46 +14,14 @@ class Publisher
 {
   public:
     explicit Publisher(std::shared_ptr<core::GlobalMapManager>
-                           p_global_trajectory_builder,
-                       double map_pub_period) : p_global_trajectory_builder_(p_global_trajectory_builder), map_pub_period_(map_pub_period)
+                           global_map_builder_ptr,
+                       double map_pub_period) : global_map_builder_ptr_(global_map_builder_ptr), map_pub_period_(map_pub_period)
     {
         mapPublisher_ = node_.advertise<nav_msgs::OccupancyGrid>("map", 1, true);
-        trajectory_node_list_publisher_ = node_.advertise<::visualization_msgs::MarkerArray>("node_list", 1);
+        node_list_publisher_ = node_.advertise<::visualization_msgs::MarkerArray>("node_list", 1);
         constraint_list_publisher_ = node_.advertise<::visualization_msgs::MarkerArray>("constraints", 1);
     };
 
-    void PushAndResetLineMarker(visualization_msgs::Marker *marker,
-                                std::vector<visualization_msgs::Marker> *markers)
-    {
-        if (marker->points.size() > 1)
-        {
-            markers->push_back(*marker);
-            ++marker->id;
-        }
-        marker->points.clear();
-    }
-
-    visualization_msgs::Marker CreateTrajectoryMarker(const int trajectory_id,
-                                                      const std::string &frame_id)
-    {
-        visualization_msgs::Marker marker;
-        marker.ns = "Trajectory " + std::to_string(trajectory_id);
-        marker.id = 0;
-        marker.type = visualization_msgs::Marker::LINE_STRIP;
-        marker.header.stamp = ::ros::Time::now();
-        marker.header.frame_id = frame_id;
-        ::std_msgs::ColorRGBA result;
-        result.r = 0.3f;
-        result.g = 0.f;
-        result.b = 1.f;
-        result.a = 1.f;
-
-        marker.color = result;
-        marker.scale.x = 0.1;
-        marker.pose.orientation.w = 1.;
-        marker.pose.position.z = 0.05;
-        return marker;
-    }
     geometry_msgs::Point ToGeometryMsgPoint(const Eigen::Vector3d &vector3d)
     {
         geometry_msgs::Point point;
@@ -61,134 +31,133 @@ class Publisher
         return point;
     }
 
+    std_msgs::ColorRGBA colorBar(double xbrt)
+    {
+        assert(xbrt >= 0 && xbrt <= 1);
+        xbrt = 1.0 - xbrt;
+        std_msgs::ColorRGBA color;
+        if (xbrt >= 0 && xbrt <= 0.25)
+        {
+            color.b = 1;
+            color.g = (xbrt / 0.25);
+            color.r = 0;
+        }
+        else if (xbrt > 0.25 && xbrt <= 0.5)
+        {
+            color.b = (2 - (xbrt / 0.25));
+            color.g = 1;
+            color.r = 0;
+        }
+        else if (xbrt > 0.5 && xbrt <= 0.75)
+        {
+            color.b = 0;
+            color.g = 1;
+            color.r = (xbrt / 0.25 * 1 - 2);
+        }
+        else
+        {
+            color.b = 0;
+            color.g = (4 - (xbrt / 0.25));
+            color.r = 1;
+        }
+        color.a = 1.0;
+        return color;
+    }
+
     visualization_msgs::MarkerArray GetConstraintList()
     {
         visualization_msgs::MarkerArray constraint_list;
-        int marker_id = 0;
-        visualization_msgs::Marker constraint_intra_marker;
-        constraint_intra_marker.id = marker_id++;
-        constraint_intra_marker.ns = "Intra constraints";
-        constraint_intra_marker.type = visualization_msgs::Marker::LINE_LIST;
-        constraint_intra_marker.header.stamp = ros::Time::now();
-        constraint_intra_marker.header.frame_id = "map";
-        constraint_intra_marker.scale.x = 0.03;
-        constraint_intra_marker.pose.orientation.w = 1.0;
 
-        visualization_msgs::Marker residual_intra_marker = constraint_intra_marker;
-        residual_intra_marker.id = marker_id++;
-        residual_intra_marker.ns = "Intra residuals";
-        // This and other markers which are less numerous are set to be slightly
-        // above the intra constraints marker in order to ensure that they are
-        // visible.
-        residual_intra_marker.pose.position.z = 0.1;
-
-        visualization_msgs::Marker constraint_inter_marker = constraint_intra_marker;
-        constraint_inter_marker.id = marker_id++;
-        constraint_inter_marker.ns = "Inter constraints";
-        constraint_inter_marker.pose.position.z = 0.1;
-
-        visualization_msgs::Marker residual_inter_marker = constraint_intra_marker;
-        residual_inter_marker.id = marker_id++;
-        residual_inter_marker.ns = "Inter residuals";
-        residual_inter_marker.pose.position.z = 0.1;
-
-        const auto all_trajectory_nodes = p_global_trajectory_builder_->sparse_pose_graph()->GetNodes();
-        const auto all_submap_data = p_global_trajectory_builder_ -> sparse_pose_graph()->GetAllSubmapData();
-        const auto constraints = p_global_trajectory_builder_ -> sparse_pose_graph()->constraints();
+        visualization_msgs::MarkerArray markers_array;
+        const auto nodes = global_map_builder_ptr_->sparse_pose_graph()->GetNodes();
+        const auto submaps = global_map_builder_ptr_->sparse_pose_graph()->GetAllSubmapData();
+        const auto constraints = global_map_builder_ptr_->sparse_pose_graph()->constraints();
 
         for (const auto &constraint : constraints)
         {
-            visualization_msgs::Marker *constraint_marker, *residual_marker;
-            std_msgs::ColorRGBA color_constraint, color_residual;
-            if (constraint.tag == sample_carto::core::sparse_pose_graph::Constraint::INTRA_SUBMAP)
+            if (constraint.tag == sample_carto::core::sparse_pose_graph::Constraint::INTER_SUBMAP)
             {
-                constraint_marker = &constraint_intra_marker;
-                residual_marker = &residual_intra_marker;
-                // Color mapping for submaps of various trajectories - add trajectory id
-                // to ensure different starting colors. Also add a fixed offset of 25
-                // to avoid having identical colors as trajectories.
+                visualization_msgs::Marker marker;
+                marker.header.frame_id = "/map";
+                marker.header.stamp = ros::Time::now();
+                marker.scale.x = 0.1;
+                marker.scale.y = 0.1;
+                marker.scale.z = 0.1;
+                marker.pose.position.z = 0.1;
+                std::stringstream name;
+                name << "constraints ";
+                marker.id = 1;
 
-                color_constraint.r = 1.f;
-                color_constraint.g = 0.f;
-                color_constraint.b = 0.f;
-                color_constraint.a = 0.f;
+                const auto &submap = submaps[constraint.submap_id];
+                const auto &submap_pose = submap.pose;
+                const auto &node_pose = nodes.at(constraint.node_id).pose;
+                const sample_carto::transform::Rigid3d constraint_pose = submap_pose * constraint.pose.zbar_ij;
 
-                color_residual.a = 1.0;
-                color_residual.r = 1.0;
+                marker.points.push_back(ToGeometryMsgPoint(constraint_pose.translation()));
+                marker.points.push_back(ToGeometryMsgPoint(node_pose.translation()));
+                marker.color = colorBar(0.99);
+
+                //marker.pose.position.x = node_point.x;
+                //marker.pose.position.y = node_point.y;
+                std::cout<<constraint.submap_id <<" to "<<constraint.node_id<<"\n";
+                std::cout<<constraint_pose.translation()<<"\n";
+                std::cout<<node_pose.translation()<<"\n";
+
+                marker.type = visualization_msgs::Marker::LINE_LIST;
+                marker.action = visualization_msgs::Marker::ADD;
+
+                markers_array.markers.push_back(marker);
             }
-            else
-            {
-                constraint_marker = &constraint_inter_marker;
-                residual_marker = &residual_inter_marker;
-                // Bright yellow
-                color_constraint.a = 1.0;
-                color_constraint.r = color_constraint.g = 1.0;
-                // Bright cyan
-                color_residual.a = 1.0;
-                color_residual.b = color_residual.g = 1.0;
-            }
-
-            for (int i = 0; i < 2; ++i)
-            {
-                constraint_marker->colors.push_back(color_constraint);
-                residual_marker->colors.push_back(color_residual);
-            }
-
-            const auto &submap_data = all_submap_data[constraint.submap_id];
-            const auto &submap_pose = submap_data.pose;
-            const auto &trajectory_node_pose = all_trajectory_nodes.at(constraint.node_id).pose;
-            const sample_carto::transform::Rigid3d constraint_pose = submap_pose * constraint.pose.zbar_ij;
-
-            constraint_marker->points.push_back(
-                ToGeometryMsgPoint(submap_pose.translation()));
-            constraint_marker->points.push_back(
-                ToGeometryMsgPoint(constraint_pose.translation()));
-
-            residual_marker->points.push_back(ToGeometryMsgPoint(constraint_pose.translation()));
-            residual_marker->points.push_back(ToGeometryMsgPoint(trajectory_node_pose.translation()));
+            
         }
-
-        constraint_list.markers.push_back(constraint_intra_marker);
-        constraint_list.markers.push_back(residual_intra_marker);
-        constraint_list.markers.push_back(constraint_inter_marker);
-        constraint_list.markers.push_back(residual_inter_marker);
-        return constraint_list;
+        std::cout<<"---------------\n";
+        return markers_array;
     }
 
     visualization_msgs::MarkerArray GetTrajectoryNodeList()
     {
-        visualization_msgs::MarkerArray trajectory_node_list;
-        const auto nodes = p_global_trajectory_builder_->sparse_pose_graph()->GetNodes();
-        visualization_msgs::Marker marker = CreateTrajectoryMarker(0, "map");
-        if (nodes.size() == 0)
-            return trajectory_node_list;
+        const auto nodes = global_map_builder_ptr_->sparse_pose_graph()->GetNodes();
+        visualization_msgs::MarkerArray markers_array;
         for (const auto &node_id_data : nodes)
         {
-            if (node_id_data.second.constant_data == nullptr)
+            visualization_msgs::Marker marker;
+            marker.header.frame_id = "/map";
+            marker.header.stamp = ros::Time::now();
+            if (node_id_data.first % 20 == 0)
             {
-                PushAndResetLineMarker(&marker, &trajectory_node_list.markers);
-                continue;
+                marker.scale.x = 0.5;
+                marker.scale.y = 0.5;
+                marker.scale.z = 0.5;
             }
-            const ::geometry_msgs::Point node_point =
-                ToGeometryMsgPoint(node_id_data.second.pose.translation());
+            else
+            {
+                marker.scale.x = 0.2;
+                marker.scale.y = 0.2;
+                marker.scale.z = 0.2;
+            }
+            marker.pose.position.z = 0.1;
+            std::stringstream name;
+            name << "node " << node_id_data.first;
+            marker.ns = name.str();
+            marker.id = node_id_data.first;
+            const ::geometry_msgs::Point node_point = ToGeometryMsgPoint(node_id_data.second.pose.translation());
+            marker.color = colorBar( ((node_id_data.first /20) % 10)/10.);
             marker.points.push_back(node_point);
-            // Work around the 16384 point limit in RViz by splitting the
-            // trajectory into multiple markers.
-            if (marker.points.size() == 16384)
-            {
-                PushAndResetLineMarker(&marker, &trajectory_node_list.markers);
-                // Push back the last point, so the two markers appear connected.
-                marker.points.push_back(node_point);
-            }
+
+            marker.pose.position.x = node_point.x;
+            marker.pose.position.y = node_point.y;
+            marker.type = visualization_msgs::Marker::SPHERE;
+            marker.action = visualization_msgs::Marker::ADD;
+            
+            markers_array.markers.push_back(marker);
         }
-        PushAndResetLineMarker(&marker, &trajectory_node_list.markers);
-        return trajectory_node_list;
+        return markers_array;
     };
 
     void makeMap()
     {
         
-        const auto all_submap_data = p_global_trajectory_builder_->sparse_pose_graph()->GetAllSubmapData();
+        const auto all_submap_data = global_map_builder_ptr_->sparse_pose_graph()->GetAllSubmapData();
         if (all_submap_data.size() == 0)
             return;
         std::vector<int8_t> &data = map_.map.data;
@@ -255,7 +224,7 @@ class Publisher
             makeMap();
             auto markerArray = GetTrajectoryNodeList();
             auto constraintArray = GetConstraintList();
-            trajectory_node_list_publisher_.publish(markerArray);
+            node_list_publisher_.publish(markerArray);
             constraint_list_publisher_.publish(constraintArray);
             mapPublisher_.publish(map_.map);
             ros::spinOnce();
@@ -264,11 +233,11 @@ class Publisher
     }
 
   private:
-    std::shared_ptr<core::GlobalMapManager> p_global_trajectory_builder_;
+    std::shared_ptr<core::GlobalMapManager> global_map_builder_ptr_;
     double map_pub_period_;
     nav_msgs::GetMap::Response map_;
     ros::Publisher mapPublisher_;
-    ros::Publisher trajectory_node_list_publisher_;
+    ros::Publisher node_list_publisher_;
     ros::Publisher constraint_list_publisher_;
     ros::NodeHandle node_;
 };

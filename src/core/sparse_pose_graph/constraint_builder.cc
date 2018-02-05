@@ -71,14 +71,14 @@ void ConstraintBuilder::MaybeAddConstraint(
     common::MutexLocker locker(&mutex_);
     constraints_.emplace_back();
     auto* const constraint = &constraints_.back();
-    ++pending_computations_[current_computation_];
-    const int current_computation = current_computation_;
+    //++pending_computations_[current_computation_];
+    //const int current_computation = current_computation_;
     ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
         submap_id, &submap->probability_grid(), [=]()  {
           ComputeConstraint(submap_id, submap, node_id,
                             false,   /* match_full_submap */
                             constant_data, initial_relative_pose, constraint);
-          FinishComputation(current_computation);
+          //FinishComputation(current_computation);
         });
   }
 }
