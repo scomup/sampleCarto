@@ -38,6 +38,7 @@
 #include "src/core/sparse_pose_graph/constraint_builder_options.h"
 #include "src/core/sparse_pose_graph/constraint.h"
 #include "src/core/sparse_pose_graph/node.h"
+#include "src/core/scan_matching/real_time_correlative_scan_matcher.h"
 
 
 
@@ -171,6 +172,7 @@ class ConstraintBuilder {
 
   FixedRatioSampler sampler_;
   scan_matching::CeresScanMatcher ceres_scan_matcher_;
+  scan_matching::RealTimeCorrelativeScanMatcher real_time_correlative_scan_matcher_;
 
 };
 

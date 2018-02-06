@@ -33,6 +33,7 @@ void ConstraintBuilderOptions::Create(common::LuaParameterDictionary *const para
     log_matches_ = parameter_dictionary->GetBool("log_matches");
     fast_correlative_scan_matcher_options_.Create(parameter_dictionary->GetDictionary("fast_correlative_scan_matcher").get());
     ceres_scan_matcher_options_.Create(parameter_dictionary->GetDictionary("ceres_scan_matcher").get());
+    real_time_correlative_scan_matcher_options_.Create(parameter_dictionary->GetDictionary("real_time_correlative_scan_matcher").get());
 };
 
 }  // namespace sparse_pose_graph

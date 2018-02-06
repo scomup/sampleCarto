@@ -16,6 +16,7 @@ find_package(Ceres REQUIRED COMPONENTS SparseLinearAlgebraLibrary)
 find_package(Eigen3 REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(PCL 1.2 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 #find_package(Lua REQUIRED)
 set(LUA_INCLUDE_DIR /usr/include/lua5.2)
@@ -34,6 +35,8 @@ include_directories(${PCL_INCLUDE_DIRS})
 include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${LUA_INCLUDE_DIR})
 include_directories(${CERES_INCLUDE_DIRS})
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 file(GLOB_RECURSE ALL_SRCS "*.cc")
 file(GLOB_RECURSE ALL_EXECUTABLES "*main.cc")
 
@@ -49,6 +52,7 @@ ${LUA_LIBRARIES}
 ${catkin_LIBRARIES}
 ${Boost_LIBRARIES}
 ${CERES_LIBRARIES}
+${OpenCV_LIBRARIES}
 dl
 )
 

@@ -365,10 +365,17 @@ void FastCorrelativeScanMatcher::ScoreCandidates(
       const Eigen::Array2i proposed_xy_index(
           xy_index.x() + candidate.x_index_offset,
           xy_index.y() + candidate.y_index_offset);
-      sum += precomputation_grid.GetValue(proposed_xy_index);
+      //sum += precomputation_grid.GetValue(proposed_xy_index);
+      //(liu)
+
+      double p = PrecomputationGrid::ToProbability(precomputation_grid.GetValue(proposed_xy_index));
+      sum += p > 0.51 ? 1 : p < 0.49 ? 0 : 0.5;
+      
+
     }
-    candidate.score = PrecomputationGrid::ToProbability(
-        sum / static_cast<float>(discrete_scans[candidate.scan_index].size()));
+    //candidate.score = PrecomputationGrid::ToProbability(sum / static_cast<float>(discrete_scans[candidate.scan_index].size()));
+    candidate.score = sum / static_cast<float>(discrete_scans[candidate.scan_index].size());
+
   }
   std::sort(candidates->begin(), candidates->end(), std::greater<Candidate>());
 }

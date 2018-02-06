@@ -25,8 +25,8 @@ options = {
   provide_odom_frame = true,
   use_odometry = true,
   num_laser_scans = 0,
-  num_multi_echo_laser_scans = 1,
-  num_subdivisions_per_laser_scan = 10,
+  num_multi_echo_laser_scans = 10,
+  num_subdivisions_per_laser_scan = 1,
   num_point_clouds = 0,
   lookup_transform_timeout_sec = 0.2,
   submap_publish_period_sec = 0.3,
@@ -42,10 +42,10 @@ TRAJECTORY_BUILDER_2D.use_online_correlavtive_scan_matching = false
 TRAJECTORY_BUILDER_2D.scans_per_accumulation = 10
 MAP_BUILDER.sparse_pose_graph.optimize_every_n_scans = 20
 TRAJECTORY_BUILDER_2D.submaps.num_range_data = 20
-MAP_BUILDER.sparse_pose_graph.constraint_builder.max_constraint_distance = 10
+MAP_BUILDER.sparse_pose_graph.constraint_builder.max_constraint_distance = 20
 MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher.angular_search_window = math.rad(45)
-
-MAP_BUILDER.sparse_pose_graph.constraint_builder.log_matches = false
+MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.95
+MAP_BUILDER.sparse_pose_graph.constraint_builder.log_matches = true
 MAP_BUILDER.sparse_pose_graph.log_residual_histograms = false
 
 return options

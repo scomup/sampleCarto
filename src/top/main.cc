@@ -31,16 +31,16 @@ int main(int argc, char **argv)
     auto golbal_map_manager_ptr = std::make_shared<core::GlobalMapManager>(local_map_builder_options, sparse_pose_graph_options);
     top::SensorBridge sensor_bridge(golbal_map_manager_ptr);
 
-	top::Publisher pub = top::Publisher(golbal_map_manager_ptr, 0.3);
-	new std::thread(&top::Publisher::pcd, &pub);
-
+	top::Publisher pub = top::Publisher(golbal_map_manager_ptr, 0.3, local_map_builder_options.submaps_options_.num_range_data_);
+    std::thread t1(&top::Publisher::pcd, &pub);
     ros::Rate loop_rate(10000);
 
     while (ros::ok())
     {
         if (bagReader.scan_raw_datas_.size() == 0 || bagReader.odom_raw_datas_.size() == 0)
         {
-            std::cout<<"finished!\n";
+            
+            break;
         }
         auto scan = bagReader.scan_raw_datas_.front();
         auto odom = bagReader.odom_raw_datas_.front();
@@ -58,9 +58,14 @@ int main(int argc, char **argv)
             sensor_bridge.HandleOdometryMessage(odom_ptr);
             bagReader.odom_raw_datas_.pop_front();
         }
-
+        
         loop_rate.sleep();
     }
+    //golbal_map_manager_ptr->sparse_pose_graph()->RunFinalOptimization();
+    pub.end();
+    t1.join();
+
+    std::cout<<"Finished!\n";
 
     return 0;
 }

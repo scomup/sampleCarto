@@ -47,7 +47,8 @@ ConstraintBuilder::ConstraintBuilder(
     : options_(options)
       ,thread_pool_(thread_pool)
       ,sampler_(options.sampling_ratio_)
-      ,ceres_scan_matcher_(options.ceres_scan_matcher_options_) 
+      ,ceres_scan_matcher_(options.ceres_scan_matcher_options_)
+      ,real_time_correlative_scan_matcher_(options.real_time_correlative_scan_matcher_options_)
       {}
 
 ConstraintBuilder::~ConstraintBuilder() {
@@ -71,14 +72,15 @@ void ConstraintBuilder::MaybeAddConstraint(
     common::MutexLocker locker(&mutex_);
     constraints_.emplace_back();
     auto* const constraint = &constraints_.back();
-    //++pending_computations_[current_computation_];
-    //const int current_computation = current_computation_;
+    ++pending_computations_[current_computation_];
+    const int current_computation = current_computation_;
     ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
         submap_id, &submap->probability_grid(), [=]()  {
           ComputeConstraint(submap_id, submap, node_id,
                             false,   /* match_full_submap */
                             constant_data, initial_relative_pose, constraint);
-          //FinishComputation(current_computation);
+          FinishComputation(current_computation);
+          //--pending_computations_[current_computation];
         });
   }
 }
@@ -156,16 +158,77 @@ ConstraintBuilder::GetSubmapScanMatcher(const int submap_id) {
   CHECK(submap_scan_matcher->fast_correlative_scan_matcher != nullptr);
   return submap_scan_matcher;
 }
+/*
+template <typename T>
+std::vector<T> sort_indexes(const std::vector<T> &v)
+{
+
+  // initialize original index locations
+  std::vector<T> idx(v.size());
+  std::iota(idx.begin(), idx.end(), 0);
+
+  // sort indexes based on comparing values in v
+  std::sort(idx.begin(), idx.end(),
+            [&v](T i1, T i2) { return v[i1] < v[i2]; });
+
+  return idx;
+}
+bool hough(sensor::PointCloud point_cloud)
+{
+  int step_theta = 1;
+  std::vector<double> ctheta(180/step_theta);
+  std::vector<double> stheta(180/step_theta);
+  for (int i = 0; i < 180; i+=step_theta)
+  {
+    double theta = -M_PI / 2 * M_PI / 2 * i;
+    ctheta[i/step_theta] = cos(theta);
+    stheta[i/step_theta] = sin(theta);
+  }
+  int max_distance = 200;
+  int offset = max_distance / 2;
+  std::vector<std::vector<uint>> accum;
+  accum.resize(180/step_theta, std::vector<uint>(max_distance));
+  std::vector<uint> hough_res(180/step_theta);
+
+
+  for (auto &p : point_cloud)
+  {
+    for (int i = 0; i < 180/step_theta; i+=step_theta)
+    {
+      int accum_idx = std::round((ctheta[i/step_theta] * p.x() + stheta[i/step_theta] * p.y()) * 10) + offset;
+      assert(accum_idx < max_distance - 1);
+      ++accum[i/step_theta][accum_idx];
+    }
+  }
+
+
+  for (int i = 0; i < 180; i+=step_theta)
+  {
+    hough_res[i/step_theta] = *std::max_element(accum[i/step_theta].begin(), accum[i/step_theta].end());
+  }
+
+  std::vector<uint> order = sort_indexes<uint>(hough_res);
+  for (int i = 0; i < 180; i+=step_theta)
+  {
+    std::cout << hough_res[i/step_theta] << ","<< "\n";
+    std::cout << order[i/step_theta] << ","<< "\n";
+  }
+  std::cout << "\n";
+
+  return 1;
+}
+*/
 
 void ConstraintBuilder::ComputeConstraint(
-    const int submap_id, const map::Submap* const submap,
+    const int submap_id, const map::Submap *const submap,
     const int node_id, bool match_full_submap,
-    const Node::Data* const constant_data,
-    const transform::Rigid2d& initial_relative_pose,
-    std::unique_ptr<Constraint>* constraint) {
+    const Node::Data *const constant_data,
+    const transform::Rigid2d &initial_relative_pose,
+    std::unique_ptr<Constraint> *constraint)
+{
   const transform::Rigid2d initial_pose =
       ComputeSubmapPose(*submap) * initial_relative_pose;
-  const SubmapScanMatcher* const submap_scan_matcher =
+  const SubmapScanMatcher *const submap_scan_matcher =
       GetSubmapScanMatcher(submap_id);
 
   // The 'constraint_transform' (submap i <- scan j) is computed from:
@@ -180,12 +243,18 @@ void ConstraintBuilder::ComputeConstraint(
   // 1. Fast estimate using the fast correlative scan matcher.
   // 2. Prune if the score is too low.
   // 3. Refine.
-  if (match_full_submap) {
+  //if(!hough(constant_data->filtered_gravity_aligned_point_cloud))//(liu)
+  //  return;
+  if (match_full_submap)
+  {
     if (submap_scan_matcher->fast_correlative_scan_matcher->MatchFullSubmap(
             constant_data->filtered_gravity_aligned_point_cloud,
-            options_.global_localization_min_score_, &score, &pose_estimate)) {
+            options_.global_localization_min_score_, &score, &pose_estimate))
+    {
       CHECK_GT(score, options_.global_localization_min_score_);
-    } else {
+    }
+    else
+    {
       return;
     }
   } else {
@@ -198,6 +267,13 @@ void ConstraintBuilder::ComputeConstraint(
       return;
     }
   }
+
+  double s = real_time_correlative_scan_matcher_.Match(
+      pose_estimate, constant_data->filtered_gravity_aligned_point_cloud,
+      *submap_scan_matcher->probability_grid, &pose_estimate);
+  if (s == 0)
+    return;
+
   {
     common::MutexLocker locker(&mutex_);
   }

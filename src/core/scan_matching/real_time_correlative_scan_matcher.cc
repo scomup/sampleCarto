@@ -110,6 +110,22 @@ double RealTimeCorrelativeScanMatcher::Match(
 
   const Candidate& best_candidate =
       *std::max_element(candidates.begin(), candidates.end());
+      //(liu) add
+  std::sort(candidates.begin(), candidates.end(), std::greater<Candidate>());
+
+  for (int i = 0; i < candidates.size(); i++)
+  {
+      if (candidates[0].score * 0.95 > candidates[i].score)
+      {
+          break;
+      }
+
+      double diff = sqrt((candidates[i].x - candidates[0].x) * (candidates[i].x - candidates[0].x) + (candidates[i].y - candidates[0].y) * (candidates[i].y - candidates[0].y));
+      if (diff >= 0.2)
+      {
+          return 0;
+      }
+  }
   *pose_estimate = transform::Rigid2d(
       {initial_pose_estimate.translation().x() + best_candidate.x,
        initial_pose_estimate.translation().y() + best_candidate.y},

@@ -20,6 +20,7 @@
 #include "src/common/lua_parameter_dictionary.h"
 #include "src/core/scan_matching/ceres_scan_matcher.h"
 #include "src/core/scan_matching/fast_correlative_scan_matcher.h"
+#include "src/core/scan_matching/real_time_correlative_scan_matcher.h"
 
 namespace sample_carto {
 namespace core {
@@ -39,6 +40,7 @@ public:
 
   scan_matching::FastCorrelativeScanMatcherOptions fast_correlative_scan_matcher_options_;
   scan_matching::CeresScanMatcherOptions ceres_scan_matcher_options_;
+  scan_matching::RealTimeCorrelativeScanMatcherOptions real_time_correlative_scan_matcher_options_;
 };
 
 
