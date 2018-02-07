@@ -366,16 +366,14 @@ void FastCorrelativeScanMatcher::ScoreCandidates(
           xy_index.x() + candidate.x_index_offset,
           xy_index.y() + candidate.y_index_offset);
       //sum += precomputation_grid.GetValue(proposed_xy_index);
-      //(liu)
-
+      //(liu) the new score algorithm give higher score to a scandidate
+      // whose points laid on the obstacle area.
       double p = PrecomputationGrid::ToProbability(precomputation_grid.GetValue(proposed_xy_index));
       sum += p > 0.51 ? 1 : p < 0.49 ? 0 : 0.5;
-      
-
     }
+
     //candidate.score = PrecomputationGrid::ToProbability(sum / static_cast<float>(discrete_scans[candidate.scan_index].size()));
     candidate.score = sum / static_cast<float>(discrete_scans[candidate.scan_index].size());
-
   }
   std::sort(candidates->begin(), candidates->end(), std::greater<Candidate>());
 }

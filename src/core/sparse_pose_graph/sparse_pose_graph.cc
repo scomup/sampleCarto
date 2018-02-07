@@ -264,37 +264,73 @@ void SparsePoseGraph::ComputeConstraintsForScan(std::vector<std::shared_ptr<cons
   }
 }
 
+
 void SparsePoseGraph::ComputeConstraint(const int node_id, const int submap_id)
 {
 
   CHECK(submap_data_.at(submap_id).state == SubmapState::kFinished);
+  //printf("try add %d to %d.\n", submap_id, node_id);
+  const auto &grid = submap_data_.at(submap_id).submap.get()->probability_grid();
+  const Eigen::Vector2f p2d(optimization_problem_.node_data().at(node_id).pose.translation().x(),
+                            optimization_problem_.node_data().at(node_id).pose.translation().y());
 
-  // Only globally match against submaps not in this trajectory.
-  //do not use MaybeAddGlobalConstraint(liu)
-  /*
-  if (localization_samplers_->Pulse())
+  if (cv_submaps_.count(submap_id) == 0)
   {
-    constraint_builder_.MaybeAddGlobalConstraint(
-        submap_id, submap_data_.at(submap_id).submap.get(), node_id,
-        nodes_.at(node_id).constant_data.get());
+    auto &m = submap_data_[submap_id];
+    Eigen::Array2i offset;
+    core::map::CellLimits limits;
+    const auto &grid = m.submap->probability_grid();
+    grid.ComputeCroppedLimits(&offset, &limits);
+    cv::Mat cv_submap(grid.limits().cell_limits().num_y_cells, grid.limits().cell_limits().num_x_cells, CV_8UC3, cv::Scalar(200, 200, 200));
+    for (const Eigen::Array2i &xy_index : core::map::XYIndexRangeIterator(limits))
+    {
+      Eigen::Array2i local = xy_index + offset;
+      if (grid.IsKnown(local))
+      {
+        const double p = grid.GetProbability(xy_index + offset);
+        int map_state = 0;
+        if (p > 0.51)
+          map_state = (1 - p) * 200;
+        else if (p < 0.49)
+          map_state = 255;
+        cv_submap.at<cv::Vec3b>(local.y(), local.x()) = cv::Vec3b(map_state, map_state, map_state);
+      }
+    }
+    cv_submaps_[submap_id] = cv_submap;
   }
-  else
+  cv::Mat cv_submap = cv_submaps_[submap_id].clone();
+  sensor::PointCloud points = nodes_.at(node_id).constant_data.get()->filtered_gravity_aligned_point_cloud;
+  auto &m = submap_data_[submap_id];
+  const auto &grid = m.submap->probability_grid();
+  //grid.ComputeCroppedLimits(&offset, &limits);
+  for (auto p : points)
   {
-    const transform::Rigid2d initial_relative_pose =
-        optimization_problem_.submap_data().at(submap_id) *
-        optimization_problem_.node_data().at(node_id).pose;
-    constraint_builder_.MaybeAddConstraint(
-        submap_id, submap_data_.at(submap_id).submap.get(), node_id,
-        nodes_.at(node_id).constant_data.get(),
-        initial_relative_pose);
-  }*/
-      const transform::Rigid2d initial_relative_pose =
-        optimization_problem_.submap_data().at(submap_id) *
-        optimization_problem_.node_data().at(node_id).pose;
-    constraint_builder_.MaybeAddConstraint(
-        submap_id, submap_data_.at(submap_id).submap.get(), node_id,
-        nodes_.at(node_id).constant_data.get(),
-        initial_relative_pose);
+    const Eigen::Vector3d point = trans * p.cast<double>();
+    const Eigen::Vector2f p2d(point.x(), point.y());
+    //std::cout<<p<<"\n";
+
+    Eigen::Array2i local = grid.limits().GetCellIndex(p2d);
+    //std::cout<<local<<"\n";
+    cv_submap.at<cv::Vec3b>(local.y(), local.x()) = cv::Vec3b(0, 255, 0);
+  }
+  std::stringstream name;
+  name << "constraints_" << submap_id << "_to_" << node_id << ".png";
+  cv::imwrite(name.str(), cv_submap);
+
+  if (!grid.IsKnown(grid.limits().GetCellIndex(p2d)))
+  {
+    //printf("try add %d to %d. failed!(the node do not localized in this submap)\n", submap_id, node_id);
+    //return;
+  }
+
+
+  const transform::Rigid2d initial_relative_pose =
+      optimization_problem_.submap_data().at(submap_id) *
+      optimization_problem_.node_data().at(node_id).pose;
+  constraint_builder_.MaybeAddConstraint(
+      submap_id, submap_data_.at(submap_id).submap.get(), node_id,
+      nodes_.at(node_id).constant_data.get(),
+      initial_relative_pose);
 }
 
 void SparsePoseGraph::ComputeConstraintsForOldScans(const int submap_id)

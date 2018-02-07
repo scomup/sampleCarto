@@ -39,7 +39,7 @@ SPARSE_POSE_GRAPH = {
     },
     real_time_correlative_scan_matcher = {
       linear_search_window = 0.2,
-      angular_search_window = math.rad(1.),
+      angular_search_window = math.rad(0.),
       translation_delta_cost_weight = 0,
       rotation_delta_cost_weight = 0,
     },

@@ -62,6 +62,8 @@ int main(int argc, char **argv)
         loop_rate.sleep();
     }
     //golbal_map_manager_ptr->sparse_pose_graph()->RunFinalOptimization();
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
     pub.end();
     t1.join();
 

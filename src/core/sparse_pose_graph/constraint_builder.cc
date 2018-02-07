@@ -64,25 +64,32 @@ void ConstraintBuilder::MaybeAddConstraint(
     const int node_id,
     const Node::Data* const constant_data,
     const transform::Rigid2d& initial_relative_pose) {
-  if (initial_relative_pose.translation().norm() >
-      options_.max_constraint_distance_) {
-    return;
-  }
-  if (sampler_.Pulse()) {
-    common::MutexLocker locker(&mutex_);
-    constraints_.emplace_back();
-    auto* const constraint = &constraints_.back();
-    ++pending_computations_[current_computation_];
-    const int current_computation = current_computation_;
-    ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
-        submap_id, &submap->probability_grid(), [=]()  {
-          ComputeConstraint(submap_id, submap, node_id,
-                            false,   /* match_full_submap */
-                            constant_data, initial_relative_pose, constraint);
-          FinishComputation(current_computation);
-          //--pending_computations_[current_computation];
-        });
-  }
+      /*
+      if (initial_relative_pose.translation().norm() >
+          options_.max_constraint_distance_)
+      {
+        return;
+      }
+      */
+      if (sampler_.Pulse())
+      {
+        common::MutexLocker locker(&mutex_);
+        constraints_.emplace_back();
+        auto *const constraint = &constraints_.back();
+        ++pending_computations_[current_computation_];
+        const int current_computation = current_computation_;
+        ScheduleSubmapScanMatcherConstructionAndQueueWorkItem(
+            submap_id, &submap->probability_grid(), [=]() {
+              ComputeConstraint(submap_id, submap, node_id,
+                                false, /* match_full_submap */
+                                constant_data, initial_relative_pose, constraint);
+              FinishComputation(current_computation);
+            });
+      }
+      else
+      {
+        printf("try add %d to %d. failed!(sampler)\n", submap_id, node_id);
+      }
 }
 
 void ConstraintBuilder::MaybeAddGlobalConstraint(
@@ -264,15 +271,23 @@ void ConstraintBuilder::ComputeConstraint(
       // We've reported a successful local match.
       CHECK_GT(score, options_.min_score_);
     } else {
+        //printf("try add %d to %d. failed!(fast_correlative_scan_matcher)\n", submap_id, node_id);
+
+
       return;
     }
   }
 
-  double s = real_time_correlative_scan_matcher_.Match(
+  // if these are some candidates with similar score to the best candiate,
+  // we do not use the best candiate. (liu)
+  score = real_time_correlative_scan_matcher_.Match(
       pose_estimate, constant_data->filtered_gravity_aligned_point_cloud,
       *submap_scan_matcher->probability_grid, &pose_estimate);
-  if (s == 0)
+  if (score == 0)
+  {
+    printf("try add %d to %d. failed!(real_time_correlative_scan_matcher_)\n", submap_id, node_id);
     return;
+  }
 
   {
     common::MutexLocker locker(&mutex_);
@@ -289,6 +304,8 @@ void ConstraintBuilder::ComputeConstraint(
 
   const transform::Rigid2d constraint_transform =
       ComputeSubmapPose(*submap).inverse() * pose_estimate;
+  printf("try add %d to %d. OK!\n", submap_id, node_id);
+
   constraint->reset(new Constraint{submap_id,
                                    node_id,
                                    {transform::Embed3D(constraint_transform),

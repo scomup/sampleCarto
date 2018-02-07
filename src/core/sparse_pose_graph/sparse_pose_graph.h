@@ -38,7 +38,7 @@
 #include "src/core/sparse_pose_graph/constraint.h"
 #include "src/core/sparse_pose_graph/optimization_problem_options.h"
 #include "src/core/sparse_pose_graph/constraint_builder_options.h"
-
+#include <opencv2/opencv.hpp>//(liu) debug
 namespace sample_carto
 {
 namespace core
@@ -182,6 +182,7 @@ private:
   int num_scans_since_last_loop_closure_  = 0;
     // Whether the optimization has to be run before more data is added.
   bool run_loop_closure_ = false;
+  std::map<int, cv::Mat> cv_submaps_;//(liu) debug
 
 
 

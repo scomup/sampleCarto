@@ -108,19 +108,18 @@ double RealTimeCorrelativeScanMatcher::Match(
   ScoreCandidates(probability_grid, discrete_scans, search_parameters,
                   &candidates);
 
-  const Candidate& best_candidate =
-      *std::max_element(candidates.begin(), candidates.end());
-      //(liu) add
+  //(liu) check nearby
   std::sort(candidates.begin(), candidates.end(), std::greater<Candidate>());
+  const Candidate &best_candidate = *std::max_element(candidates.begin(), candidates.end());
 
-  for (int i = 0; i < candidates.size(); i++)
+  for (int i = 0; i < static_cast<int>(candidates.size()); i++)
   {
-      if (candidates[0].score * 0.95 > candidates[i].score)
+        //std::cout<<std::hypot((candidates[i].x - candidates[0].x), (candidates[i].y - candidates[0].y))<<":"<<candidates[i].score<<"\n";
+      if (candidates[0].score * 0.98 > candidates[i].score)
       {
           break;
       }
-
-      double diff = sqrt((candidates[i].x - candidates[0].x) * (candidates[i].x - candidates[0].x) + (candidates[i].y - candidates[0].y) * (candidates[i].y - candidates[0].y));
+      double diff = std::hypot((candidates[i].x - candidates[0].x), (candidates[i].y - candidates[0].y));
       if (diff >= 0.2)
       {
           return 0;
@@ -145,9 +144,14 @@ void RealTimeCorrelativeScanMatcher::ScoreCandidates(
       const Eigen::Array2i proposed_xy_index(
           xy_index.x() + candidate.x_index_offset,
           xy_index.y() + candidate.y_index_offset);
-      const float probability =
-          probability_grid.GetProbability(proposed_xy_index);
-      candidate.score += probability;
+      //const float probability =
+      //    probability_grid.GetProbability(proposed_xy_index);
+      //candidate.score += probability;
+
+      //(liu) the new score algorithm give higher score to a scandidate
+      // whose points laid on the obstacle area.
+      const float p = probability_grid.GetProbability(proposed_xy_index);
+      candidate.score += p > 0.51 ? 1 : p < 0.49 ? 0 : 0.5;
     }
     candidate.score /=
         static_cast<float>(discrete_scans[candidate.scan_index].size());
@@ -156,7 +160,7 @@ void RealTimeCorrelativeScanMatcher::ScoreCandidates(
                                    options_.translation_delta_cost_weight_ +
                                std::abs(candidate.orientation) *
                                    options_.rotation_delta_cost_weight_));
-    CHECK_GT(candidate.score, 0.f);
+    CHECK_GE(candidate.score, 0.f);
   }
 }
 
