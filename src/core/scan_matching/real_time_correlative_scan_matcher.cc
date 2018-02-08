@@ -111,14 +111,13 @@ double RealTimeCorrelativeScanMatcher::Match(
   //(liu) check nearby
   std::sort(candidates.begin(), candidates.end(), std::greater<Candidate>());
   const Candidate &best_candidate = *std::max_element(candidates.begin(), candidates.end());
-
-  for (int i = 0; i < static_cast<int>(candidates.size()); i++)
+  for (int i = 0; i <  static_cast<int>(candidates.size()); i++)
   {
-        //std::cout<<std::hypot((candidates[i].x - candidates[0].x), (candidates[i].y - candidates[0].y))<<":"<<candidates[i].score<<"\n";
-      if (candidates[0].score * 0.98 > candidates[i].score)
+      if (candidates[0].score * 0.95 > candidates[i].score)
       {
           break;
       }
+
       double diff = std::hypot((candidates[i].x - candidates[0].x), (candidates[i].y - candidates[0].y));
       if (diff >= 0.2)
       {

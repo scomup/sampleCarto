@@ -264,15 +264,10 @@ void SparsePoseGraph::ComputeConstraintsForScan(std::vector<std::shared_ptr<cons
   }
 }
 
-
 void SparsePoseGraph::ComputeConstraint(const int node_id, const int submap_id)
 {
 
   CHECK(submap_data_.at(submap_id).state == SubmapState::kFinished);
-  //printf("try add %d to %d.\n", submap_id, node_id);
-  const auto &grid = submap_data_.at(submap_id).submap.get()->probability_grid();
-  const Eigen::Vector2f p2d(optimization_problem_.node_data().at(node_id).pose.translation().x(),
-                            optimization_problem_.node_data().at(node_id).pose.translation().y());
 
   if (cv_submaps_.count(submap_id) == 0)
   {
@@ -299,33 +294,45 @@ void SparsePoseGraph::ComputeConstraint(const int node_id, const int submap_id)
     cv_submaps_[submap_id] = cv_submap;
   }
   cv::Mat cv_submap = cv_submaps_[submap_id].clone();
+  auto &grid = submap_data_[submap_id].submap->probability_grid();
+
+
+
   sensor::PointCloud points = nodes_.at(node_id).constant_data.get()->filtered_gravity_aligned_point_cloud;
-  auto &m = submap_data_[submap_id];
-  const auto &grid = m.submap->probability_grid();
-  //grid.ComputeCroppedLimits(&offset, &limits);
+  const sample_carto::transform::Rigid2d& trans = optimization_problem_.node_data().at(node_id).pose;
+  const Eigen::Vector2d org(0, 0);
+  const Eigen::Vector2d node_pose = trans * org;
+    if (!grid.IsKnown(grid.limits().GetCellIndex(node_pose.cast <float> ())))
+  {
+    //printf("try add %d to %d. failed!(the node do not localized in this submap)\n", submap_id, node_id);
+    return;
+  }
+  Eigen::Array2i local = grid.limits().GetCellIndex(node_pose.cast <float> ());
+  cv::circle(cv_submap, cv::Point(local.x(), local.y()), 1, cv::Scalar(0, 0, 255), 1, 4);
+
+
   for (auto p : points)
   {
-    const Eigen::Vector3d point = trans * p.cast<double>();
-    const Eigen::Vector2f p2d(point.x(), point.y());
-    //std::cout<<p<<"\n";
+    
+    const Eigen::Vector2d tmp(p.x(), p.y());
+    const Eigen::Vector2d pd = trans * tmp;
+    Eigen::Array2i local = grid.limits().GetCellIndex(pd.cast <float> ());
 
-    Eigen::Array2i local = grid.limits().GetCellIndex(p2d);
-    //std::cout<<local<<"\n";
-    cv_submap.at<cv::Vec3b>(local.y(), local.x()) = cv::Vec3b(0, 255, 0);
+    cv::Rect rect(cv::Point(), cv_submap.size());
+    cv::Point cv_local(local.x(), local.y());
+
+    if (rect.contains(cv_local))
+    {
+      cv_submap.at<cv::Vec3b>(local.y(), local.x()) = cv::Vec3b(0, 255, 0);
+    }
   }
   std::stringstream name;
   name << "constraints_" << submap_id << "_to_" << node_id << ".png";
-  cv::imwrite(name.str(), cv_submap);
-
-  if (!grid.IsKnown(grid.limits().GetCellIndex(p2d)))
-  {
-    //printf("try add %d to %d. failed!(the node do not localized in this submap)\n", submap_id, node_id);
-    //return;
-  }
-
+  //cv::imwrite(name.str(), cv_submap);
+  
 
   const transform::Rigid2d initial_relative_pose =
-      optimization_problem_.submap_data().at(submap_id) *
+      optimization_problem_.submap_data().at(submap_id).inverse()*
       optimization_problem_.node_data().at(node_id).pose;
   constraint_builder_.MaybeAddConstraint(
       submap_id, submap_data_.at(submap_id).submap.get(), node_id,

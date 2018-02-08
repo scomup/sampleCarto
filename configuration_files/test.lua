@@ -44,7 +44,9 @@ MAP_BUILDER.sparse_pose_graph.optimize_every_n_scans = 20
 TRAJECTORY_BUILDER_2D.submaps.num_range_data = 15
 MAP_BUILDER.sparse_pose_graph.constraint_builder.max_constraint_distance = 20
 MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher.angular_search_window = math.rad(45)
-MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.95
+MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher.branch_and_bound_depth = 7
+
+MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.90
 MAP_BUILDER.sparse_pose_graph.constraint_builder.log_matches = false
 MAP_BUILDER.sparse_pose_graph.constraint_builder.sampling_ratio = 1.
 MAP_BUILDER.sparse_pose_graph.log_residual_histograms = false

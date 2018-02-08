@@ -358,6 +358,7 @@ void FastCorrelativeScanMatcher::ScoreCandidates(
 {
   for (Candidate &candidate : *candidates)
   {
+    int count = 0;
     int sum = 0;
     for (const Eigen::Array2i &xy_index :
          discrete_scans[candidate.scan_index])
@@ -368,12 +369,22 @@ void FastCorrelativeScanMatcher::ScoreCandidates(
       //sum += precomputation_grid.GetValue(proposed_xy_index);
       //(liu) the new score algorithm give higher score to a scandidate
       // whose points laid on the obstacle area.
-      double p = PrecomputationGrid::ToProbability(precomputation_grid.GetValue(proposed_xy_index));
-      sum += p > 0.51 ? 1 : p < 0.49 ? 0 : 0.5;
-    }
 
+      double p = PrecomputationGrid::ToProbability(precomputation_grid.GetValue(proposed_xy_index));
+      if (p < 0.49 || p > 0.51)
+      {
+        count++;
+      }
+      if (p > 0.51)
+      {
+        sum++;
+      }
+    }
     //candidate.score = PrecomputationGrid::ToProbability(sum / static_cast<float>(discrete_scans[candidate.scan_index].size()));
-    candidate.score = sum / static_cast<float>(discrete_scans[candidate.scan_index].size());
+    count = ((double)count > (double)discrete_scans[candidate.scan_index].size()*0.7) ? count : discrete_scans[candidate.scan_index].size();
+    candidate.score = sum / static_cast<float>(count);
+    //std::cout<<"candidate.score:"<<candidate.score<<"\n";
+
   }
   std::sort(candidates->begin(), candidates->end(), std::greater<Candidate>());
 }
@@ -384,21 +395,32 @@ Candidate FastCorrelativeScanMatcher::BranchAndBound(
     const std::vector<Candidate> &candidates, const int candidate_depth,
     float min_score) const
 {
+
+
+  std::vector<Candidate> this_level_candidates(candidates);
+  std::vector<Candidate> next_level_candidates;
+
+  ScoreCandidates(precomputation_grid_stack_->Get(candidate_depth),
+                  discrete_scans, search_parameters,
+                  &this_level_candidates);
   if (candidate_depth == 0)
   {
     // Return the best candidate.
-    return *candidates.begin();
+    return *this_level_candidates.begin();
   }
-
-  Candidate best_high_resolution_candidate(0, 0, 0, search_parameters);
-  best_high_resolution_candidate.score = min_score;
-  for (const Candidate &candidate : candidates)
+  Candidate best(this_level_candidates[0]);
+  for (int i = 0; i<static_cast<int>(this_level_candidates.size()); i++)
   {
-    if (candidate.score <= min_score)
+    if (this_level_candidates[i].score < min_score)
     {
-      break;
+      this_level_candidates.erase(this_level_candidates.begin() + i, this_level_candidates.end());
     }
-    std::vector<Candidate> higher_resolution_candidates;
+  }
+  if (this_level_candidates.size() == 0)
+    return best;
+
+  for (const Candidate &candidate : this_level_candidates)
+  {
     const int half_width = 1 << (candidate_depth - 1);
     for (int x_offset : {0, half_width})
     {
@@ -414,22 +436,20 @@ Candidate FastCorrelativeScanMatcher::BranchAndBound(
         {
           break;
         }
-        higher_resolution_candidates.emplace_back(
+        next_level_candidates.emplace_back(
             candidate.scan_index, candidate.x_index_offset + x_offset,
             candidate.y_index_offset + y_offset, search_parameters);
       }
     }
-    ScoreCandidates(precomputation_grid_stack_->Get(candidate_depth - 1),
-                    discrete_scans, search_parameters,
-                    &higher_resolution_candidates);
-    best_high_resolution_candidate = std::max(
-        best_high_resolution_candidate,
-        BranchAndBound(discrete_scans, search_parameters,
-                       higher_resolution_candidates, candidate_depth - 1,
-                       best_high_resolution_candidate.score));
   }
-  return best_high_resolution_candidate;
+
+  Candidate next_level_best = BranchAndBound(discrete_scans, search_parameters,
+                                             next_level_candidates, candidate_depth - 1,
+                                             min_score); //(liu)
+
+  return next_level_best;
 }
+
 
 } // namespace scan_matching
 } // namespace core
