@@ -269,6 +269,23 @@ void SparsePoseGraph::ComputeConstraint(const int node_id, const int submap_id)
 
   CHECK(submap_data_.at(submap_id).state == SubmapState::kFinished);
 
+  auto &grid = submap_data_[submap_id].submap->probability_grid();
+  const sample_carto::transform::Rigid2d& node_pose = optimization_problem_.node_data().at(node_id).pose;
+  const Eigen::Vector2f scan_center = node_pose.cast<float>() * Eigen::Vector2f(0,0);
+  Eigen::Array2i scan_center_map_idx = grid.limits().GetCellIndex(scan_center);
+
+  //(liu) do not add constraint, if the submap doesn't contain the scan center of the node.
+  if (!grid.limits().Contains(scan_center_map_idx))
+  {
+    return;
+  }
+  if (!grid.IsKnown(scan_center_map_idx))
+  {
+    return;
+  }
+
+  //save potential constraints add image
+#ifdef OPENCV_DEBUG
   if (cv_submaps_.count(submap_id) == 0)
   {
     auto &m = submap_data_[submap_id];
@@ -279,57 +296,43 @@ void SparsePoseGraph::ComputeConstraint(const int node_id, const int submap_id)
     cv::Mat cv_submap(grid.limits().cell_limits().num_y_cells, grid.limits().cell_limits().num_x_cells, CV_8UC3, cv::Scalar(200, 200, 200));
     for (const Eigen::Array2i &xy_index : core::map::XYIndexRangeIterator(limits))
     {
-      Eigen::Array2i local = xy_index + offset;
-      if (grid.IsKnown(local))
+      Eigen::Array2i map_xy = xy_index + offset;
+      if (grid.IsKnown(map_xy))
       {
-        const double p = grid.GetProbability(xy_index + offset);
+        const double p = grid.GetProbability(map_xy);
         int map_state = 0;
         if (p > 0.51)
           map_state = (1 - p) * 200;
         else if (p < 0.49)
           map_state = 255;
-        cv_submap.at<cv::Vec3b>(local.y(), local.x()) = cv::Vec3b(map_state, map_state, map_state);
+        cv_submap.at<cv::Vec3b>(map_xy.y(), map_xy.x()) = cv::Vec3b(map_state, map_state, map_state);
       }
     }
     cv_submaps_[submap_id] = cv_submap;
   }
   cv::Mat cv_submap = cv_submaps_[submap_id].clone();
-  auto &grid = submap_data_[submap_id].submap->probability_grid();
-
 
 
   sensor::PointCloud points = nodes_.at(node_id).constant_data.get()->filtered_gravity_aligned_point_cloud;
-  const sample_carto::transform::Rigid2d& trans = optimization_problem_.node_data().at(node_id).pose;
-  const Eigen::Vector2d org(0, 0);
-  const Eigen::Vector2d node_pose = trans * org;
-    if (!grid.IsKnown(grid.limits().GetCellIndex(node_pose.cast <float> ())))
+  cv::Rect rect(cv::Point(), cv_submap.size());
+  if (rect.contains(cv::Point(scan_center_map_idx.x(), scan_center_map_idx.y())))
   {
-    //printf("try add %d to %d. failed!(the node do not localized in this submap)\n", submap_id, node_id);
-    return;
+    cv_submap.at<cv::Vec3b>(scan_center_map_idx.y(), scan_center_map_idx.x()) = cv::Vec3b(0, 0, 255);
   }
-  Eigen::Array2i local = grid.limits().GetCellIndex(node_pose.cast <float> ());
-  cv::circle(cv_submap, cv::Point(local.x(), local.y()), 1, cv::Scalar(0, 0, 255), 1, 4);
-
 
   for (auto p : points)
   {
-    
-    const Eigen::Vector2d tmp(p.x(), p.y());
-    const Eigen::Vector2d pd = trans * tmp;
-    Eigen::Array2i local = grid.limits().GetCellIndex(pd.cast <float> ());
-
-    cv::Rect rect(cv::Point(), cv_submap.size());
-    cv::Point cv_local(local.x(), local.y());
-
-    if (rect.contains(cv_local))
+    const Eigen::Vector2f point = node_pose.cast<float>() * p.head<2>();
+    Eigen::Array2i map_xy = grid.limits().GetCellIndex(point);
+    if (rect.contains(cv::Point(map_xy.x(), map_xy.y())))
     {
-      cv_submap.at<cv::Vec3b>(local.y(), local.x()) = cv::Vec3b(0, 255, 0);
+      cv_submap.at<cv::Vec3b>(map_xy.y(), map_xy.x()) = cv::Vec3b(0, 255, 0);
     }
   }
   std::stringstream name;
-  name << "constraints_" << submap_id << "_to_" << node_id << ".png";
-  //cv::imwrite(name.str(), cv_submap);
-  
+  name << "try_constraints_" << submap_id << "_to_" << node_id << ".png";
+  cv::imwrite(name.str(), cv_submap);
+#endif
 
   const transform::Rigid2d initial_relative_pose =
       optimization_problem_.submap_data().at(submap_id).inverse()*

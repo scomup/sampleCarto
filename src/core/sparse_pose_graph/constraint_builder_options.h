@@ -40,7 +40,6 @@ public:
 
   scan_matching::FastCorrelativeScanMatcherOptions fast_correlative_scan_matcher_options_;
   scan_matching::CeresScanMatcherOptions ceres_scan_matcher_options_;
-  scan_matching::RealTimeCorrelativeScanMatcherOptions real_time_correlative_scan_matcher_options_;
 };
 
 

@@ -381,7 +381,7 @@ void FastCorrelativeScanMatcher::ScoreCandidates(
       }
     }
     //candidate.score = PrecomputationGrid::ToProbability(sum / static_cast<float>(discrete_scans[candidate.scan_index].size()));
-    count = ((double)count > (double)discrete_scans[candidate.scan_index].size()*0.7) ? count : discrete_scans[candidate.scan_index].size();
+    //count = ((double)count > (double)discrete_scans[candidate.scan_index].size()*0.7) ? count : discrete_scans[candidate.scan_index].size();
     candidate.score = sum / static_cast<float>(count);
     //std::cout<<"candidate.score:"<<candidate.score<<"\n";
 
@@ -403,13 +403,8 @@ Candidate FastCorrelativeScanMatcher::BranchAndBound(
   ScoreCandidates(precomputation_grid_stack_->Get(candidate_depth),
                   discrete_scans, search_parameters,
                   &this_level_candidates);
-  if (candidate_depth == 0)
-  {
-    // Return the best candidate.
-    return *this_level_candidates.begin();
-  }
-  Candidate best(this_level_candidates[0]);
-  for (int i = 0; i<static_cast<int>(this_level_candidates.size()); i++)
+  Candidate best_candidate(this_level_candidates[0]);
+  for (int i = 0; i < static_cast<int>(this_level_candidates.size()); i++)
   {
     if (this_level_candidates[i].score < min_score)
     {
@@ -417,8 +412,27 @@ Candidate FastCorrelativeScanMatcher::BranchAndBound(
     }
   }
   if (this_level_candidates.size() == 0)
-    return best;
+  {
+    //return a bad result.
+    best_candidate.score = 0.0;
+    return best_candidate;
+  }
 
+  if (candidate_depth == 0)
+  {
+    //(liu)return a bad result, if there is a candidate far away from the best one.
+    for (const Candidate &candidate : this_level_candidates)
+    {
+      double diff = std::hypot((candidate.x - best_candidate.x), (candidate.y - best_candidate.y));
+      if (diff >= 0.2 /*&& candidate.score > best_candidate.score *0.95*/)
+      {
+        //return a bad result.
+        best_candidate.score = 0.0;
+        return best_candidate;
+      }
+    }
+    return best_candidate;
+  }
   for (const Candidate &candidate : this_level_candidates)
   {
     const int half_width = 1 << (candidate_depth - 1);

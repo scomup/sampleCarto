@@ -30,10 +30,11 @@ using sample_carto::transform::Rigid3d;
 std::unique_ptr<::sample_carto::sensor::OdometryData> SensorBridge::ToOdometryData(const nav_msgs::Odometry::ConstPtr &msg)
 {
     double time = msg->header.stamp.toSec();
-    //TODO(liu)
-    //add code here (tf)
+    //TODO tf_pose (liu)
+  transform::Rigid3d pose({-0.0,0,0},transform::RollPitchYaw(0,0,0));
+
     return ::sample_carto::common::make_unique<::sample_carto::sensor::OdometryData>
-            (::sample_carto::sensor::OdometryData{time, ToRigid3d(msg->pose.pose)});
+            (::sample_carto::sensor::OdometryData{time, ToRigid3d(msg->pose.pose)*pose});
 }
 
 void SensorBridge::HandleLaserScanMessage(const sensor_msgs::LaserScan::ConstPtr &msg)

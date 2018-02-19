@@ -132,16 +132,18 @@ class Publisher
         //Eigen::Array2i offset;
         //core::map::CellLimits limits;
         const auto &grid = m.submap->probability_grid();
+
+        cv::Rect rect(cv::Point(), cv_submap.size());
+
         //grid.ComputeCroppedLimits(&offset, &limits);
         for (auto p : points)
         {
             const Eigen::Vector3d point = trans * p.cast<double>();
-            const Eigen::Vector2f p2d(point.x(), point.y());
-            //std::cout<<p<<"\n";
-
-            Eigen::Array2i local = grid.limits().GetCellIndex(p2d);
-            //std::cout<<local<<"\n";
-            cv_submap.at<cv::Vec3b>(local.y(), local.x()) = cv::Vec3b(0, 255, 0);
+            Eigen::Array2i map_xy = grid.limits().GetCellIndex(point.head<2>().cast<float>());
+            if (rect.contains(cv::Point(map_xy.x(), map_xy.y())))
+            {
+                cv_submap.at<cv::Vec3b>(map_xy.y(), map_xy.x()) = cv::Vec3b(0, 255, 0);
+            }
         }
         std::stringstream name;
         name << "constraints_" << submap_id << "_to_" << node_id << ".png";
@@ -173,7 +175,7 @@ class Publisher
 
                 marker.pose.position.z = 0.1;
                 std::stringstream name;
-                name << "constraints " << constraint.submap_id << " to " << constraint.node_id;
+                name << "constraints_" << constraint.submap_id << "_to_" << constraint.node_id;
                 //std::cout << name.str() << "\n";
                 marker.ns = name.str();
                 marker.id = (constraint.submap_id << 16) + constraint.node_id;
@@ -191,8 +193,10 @@ class Publisher
                 marker.action = visualization_msgs::Marker::ADD;
 
                 markers_array.markers.push_back(marker);
+                #ifdef OPENCV_DEBUG
                 CreateCVSubmapData(constraint.submap_id);
                 SaveContraintImage(constraint.submap_id,constraint.node_id, nodes.at(constraint.node_id), submap.submap->local_pose() * constraint.pose.zbar_ij);
+                #endif
             }
         }
 
@@ -281,9 +285,9 @@ class Publisher
                     int y_map = (optimized.translation().y()) / grid.limits().resolution() + map_.map.info.height / 2;
 
                     const double p = grid.GetProbability(xy_index + offset);
-                    if (data[y_map * map_.map.info.width + x_map] == -1)
+                    if (data[y_map * map_.map.info.width + x_map] <= 0)
                     {
-                        int map_state = 0;
+                        int map_state = -1;
                         if (p > 0.51)
                             map_state = p * 100;
                         else if (p < 0.49)

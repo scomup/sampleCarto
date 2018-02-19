@@ -108,22 +108,7 @@ double RealTimeCorrelativeScanMatcher::Match(
   ScoreCandidates(probability_grid, discrete_scans, search_parameters,
                   &candidates);
 
-  //(liu) check nearby
-  std::sort(candidates.begin(), candidates.end(), std::greater<Candidate>());
   const Candidate &best_candidate = *std::max_element(candidates.begin(), candidates.end());
-  for (int i = 0; i <  static_cast<int>(candidates.size()); i++)
-  {
-      if (candidates[0].score * 0.95 > candidates[i].score)
-      {
-          break;
-      }
-
-      double diff = std::hypot((candidates[i].x - candidates[0].x), (candidates[i].y - candidates[0].y));
-      if (diff >= 0.2)
-      {
-          return 0;
-      }
-  }
   *pose_estimate = transform::Rigid2d(
       {initial_pose_estimate.translation().x() + best_candidate.x,
        initial_pose_estimate.translation().y() + best_candidate.y},
@@ -143,14 +128,14 @@ void RealTimeCorrelativeScanMatcher::ScoreCandidates(
       const Eigen::Array2i proposed_xy_index(
           xy_index.x() + candidate.x_index_offset,
           xy_index.y() + candidate.y_index_offset);
-      //const float probability =
-      //    probability_grid.GetProbability(proposed_xy_index);
-      //candidate.score += probability;
+      const float probability =
+          probability_grid.GetProbability(proposed_xy_index);
+      candidate.score += probability;
 
       //(liu) the new score algorithm give higher score to a scandidate
       // whose points laid on the obstacle area.
-      const float p = probability_grid.GetProbability(proposed_xy_index);
-      candidate.score += p > 0.51 ? 1 : p < 0.49 ? 0 : 0.5;
+      //const float p = probability_grid.GetProbability(proposed_xy_index);
+      //candidate.score += p > 0.51 ? 1 : p < 0.49 ? 0 : 0.5;
     }
     candidate.score /=
         static_cast<float>(discrete_scans[candidate.scan_index].size());

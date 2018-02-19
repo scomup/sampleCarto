@@ -48,7 +48,6 @@ ConstraintBuilder::ConstraintBuilder(
       ,thread_pool_(thread_pool)
       ,sampler_(options.sampling_ratio_)
       ,ceres_scan_matcher_(options.ceres_scan_matcher_options_)
-      ,real_time_correlative_scan_matcher_(options.real_time_correlative_scan_matcher_options_)
       {}
 
 ConstraintBuilder::~ConstraintBuilder() {
@@ -64,6 +63,8 @@ void ConstraintBuilder::MaybeAddConstraint(
     const int node_id,
     const Node::Data* const constant_data,
     const transform::Rigid2d& initial_relative_pose) {
+
+  //(liu) do not use this rule
   //if (initial_relative_pose.translation().norm() >
   //    options_.max_constraint_distance_) {
   //  return;
@@ -80,7 +81,6 @@ void ConstraintBuilder::MaybeAddConstraint(
                             false,   /* match_full_submap */
                             constant_data, initial_relative_pose, constraint);
           FinishComputation(current_computation);
-          //--pending_computations_[current_computation];
         });
   }
 }
@@ -259,7 +259,7 @@ void ConstraintBuilder::ComputeConstraint(
       return;
     }
   } else {
-    std::cout <<"try "<< submap_id << "->"<<node_id<<"\n";
+    //std::cout <<"Try to add submap_"<< submap_id << "->node_"<<node_id<<"\n";
     if (submap_scan_matcher->fast_correlative_scan_matcher->Match(
             initial_pose, constant_data->filtered_gravity_aligned_point_cloud,
             options_.min_score_, &score, &pose_estimate)) {
@@ -269,13 +269,7 @@ void ConstraintBuilder::ComputeConstraint(
       return;
     }
   }
-
-  double s = real_time_correlative_scan_matcher_.Match(
-      pose_estimate, constant_data->filtered_gravity_aligned_point_cloud,
-      *submap_scan_matcher->probability_grid, &pose_estimate);
-  if (s == 0)
-    return;
-
+  
   {
     common::MutexLocker locker(&mutex_);
   }
@@ -297,7 +291,7 @@ void ConstraintBuilder::ComputeConstraint(
                                     options_.loop_closure_translation_weight_,
                                     options_.loop_closure_rotation_weight_},
                                    Constraint::INTER_SUBMAP});
-  std::cout<<"Add "<< submap_id << " to " << node_id <<" ok!!!\n";
+  //std::cout <<"Add submap_"<< submap_id << "->node_"<<node_id<<" successful!!!\n";
   if (options_.log_matches_) {
     std::ostringstream info;
     info << "Node " << node_id << " with "
