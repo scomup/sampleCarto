@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 TRAJECTORY_BUILDER_2D = {
-  use_imu_data = true,
+  use_imu_data = false,
   min_range = 0.,
   max_range = 30.,
   min_z = -0.8,
@@ -21,6 +21,11 @@ TRAJECTORY_BUILDER_2D = {
   missing_data_ray_length = 5.,
   scans_per_accumulation = 1,
   voxel_filter_size = 0.025,
+  
+  baselink_to_laser_x = 0.,
+  baselink_to_laser_y = 0.,
+  baselink_to_laser_theta = 0.,
+
 
   adaptive_voxel_filter = {
     max_length = 0.5,

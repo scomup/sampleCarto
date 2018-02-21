@@ -36,6 +36,11 @@ void LocalMapBuilderOptions::Create(common::LuaParameterDictionary *const parame
     submaps_options_.Create(parameter_dictionary->GetDictionary("submaps").get());
     real_time_correlative_scan_matcher_options_.Create(parameter_dictionary->GetDictionary("real_time_correlative_scan_matcher").get());
     ceres_scan_matcher_options_.Create(parameter_dictionary->GetDictionary("ceres_scan_matcher").get());
+    //(liu)
+    baselink_to_laser_x_ = parameter_dictionary->GetDouble("baselink_to_laser_x");;
+    baselink_to_laser_y_ = parameter_dictionary->GetDouble("baselink_to_laser_y");;
+    baselink_to_laser_theta_ = parameter_dictionary->GetDouble("baselink_to_laser_theta");;
+
 
     
 }

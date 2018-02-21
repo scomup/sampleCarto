@@ -40,6 +40,9 @@ class LocalMapBuilderOptions
     double missing_data_ray_length_;
     int scans_per_accumulation_;
     bool use_online_correlative_scan_matching_;
+    double baselink_to_laser_x_;
+    double baselink_to_laser_y_;
+    double baselink_to_laser_theta_;
     MotionFilterOptions motion_filter_options_; 
     map::SubmapsOptions submaps_options_; 
     scan_matching::RealTimeCorrelativeScanMatcherOptions real_time_correlative_scan_matcher_options_;

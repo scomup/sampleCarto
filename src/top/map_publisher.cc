@@ -1,38 +1,33 @@
-#ifndef SAMPLE_CARTO_TOP_MAPPUBLISHER_H_
-#define SAMPLE_CARTO_TOP_MAPPUBLISHER_H_
+#include "map_publisher.h"
 
-#include "visualization_msgs/MarkerArray.h"
-#include <src/core/global_manager/global_map_manager.h>
-#include <opencv2/opencv.hpp>
 
-#define COLOR_CHANGE 10
 namespace sample_carto
 {
 
 namespace top
 {
 
-class Publisher
-{
-  public:
-    explicit Publisher(std::shared_ptr<core::GlobalMapManager> global_map_builder_ptr,
+
+    #define COLOR_CHANGE 10
+
+    Publisher::Publisher(std::shared_ptr<core::GlobalMapManager> global_map_builder_ptr,
                        double map_pub_period, int node_num_per_submap) : global_map_builder_ptr_(global_map_builder_ptr),
                                                                          map_pub_period_(map_pub_period),
                                                                          node_num_per_submap_(node_num_per_submap),
-                                                                         ok_(true)
+                                                                         finish_(false)
     {
         mapPublisher_ = node_.advertise<nav_msgs::OccupancyGrid>("map", 1, true);
         node_list_publisher_ = node_.advertise<::visualization_msgs::MarkerArray>("node_list", 1);
         constraint_list_publisher_ = node_.advertise<::visualization_msgs::MarkerArray>("constraints", 1);
     };
-    void pcd()
+    void Publisher::pcd()
     {
         ros::Rate r(1.0 / map_pub_period_);
         ::ros::NodeHandle node_handle;
         ::ros::Publisher pcd_publisher;
         pcd_publisher = node_handle.advertise<sensor_msgs::PointCloud2>("carto_pcd", 1);
 
-        while (ros::ok() && ok_ )
+        while (ros::ok() && !finish_ )
         {
             makeMap();
             auto markerArray = GetTrajectoryNodeList();
@@ -44,13 +39,13 @@ class Publisher
             r.sleep();
         }
     }
-    void end()
+
+    void Publisher::finish()
     {
-        ok_ = false;
+        finish_ = true;
     }
 
-  private:
-    geometry_msgs::Point ToGeometryMsgPoint(const Eigen::Vector3d &vector3d)
+    geometry_msgs::Point Publisher::ToGeometryMsgPoint(const Eigen::Vector3d &vector3d)
     {
         geometry_msgs::Point point;
         point.x = vector3d.x();
@@ -59,7 +54,7 @@ class Publisher
         return point;
     }
 
-    std_msgs::ColorRGBA colorBar(double xbrt)
+    std_msgs::ColorRGBA Publisher::colorBar(double xbrt)
     {
         assert(xbrt >= 0 && xbrt <= 1);
         xbrt = 1.0 - xbrt;
@@ -91,7 +86,7 @@ class Publisher
         color.a = 1.0;
         return color;
     }
-    void CreateCVSubmapData(int submap_id)
+    void Publisher::CreateCVSubmapData(int submap_id)
     {
         const auto all_submap_data = global_map_builder_ptr_->sparse_pose_graph()->GetAllSubmapData();
         if (cv_submaps_.count(submap_id) != 0)
@@ -122,7 +117,7 @@ class Publisher
         return;
     }
 
-    void SaveContraintImage(int submap_id,int node_id, sample_carto::core::Node node, const sample_carto::transform::Rigid3d trans)
+    void Publisher::SaveContraintImage(int submap_id,int node_id, sample_carto::core::Node node, const sample_carto::transform::Rigid3d trans)
     {
         cv::Mat cv_submap = cv_submaps_[submap_id].clone();
         sample_carto::sensor::PointCloud points = node.constant_data->filtered_gravity_aligned_point_cloud;
@@ -152,7 +147,7 @@ class Publisher
         return;
     }
 
-    visualization_msgs::MarkerArray GetConstraintList()
+    visualization_msgs::MarkerArray Publisher::GetConstraintList()
     {
         visualization_msgs::MarkerArray constraint_list;
 
@@ -203,7 +198,7 @@ class Publisher
         return markers_array;
     }
 
-    visualization_msgs::MarkerArray GetTrajectoryNodeList()
+    visualization_msgs::MarkerArray Publisher::GetTrajectoryNodeList()
     {
         const auto nodes = global_map_builder_ptr_->sparse_pose_graph()->GetNodes();
         visualization_msgs::MarkerArray markers_array;
@@ -244,7 +239,7 @@ class Publisher
         return markers_array;
     };
 
-    void makeMap()
+    void Publisher::makeMap()
     {
 
         const auto all_submap_data = global_map_builder_ptr_->sparse_pose_graph()->GetAllSubmapData();
@@ -300,20 +295,8 @@ class Publisher
         }
     }
 
-  private:
-    std::shared_ptr<core::GlobalMapManager> global_map_builder_ptr_;
-    double map_pub_period_;
-    nav_msgs::GetMap::Response map_;
-    ros::Publisher mapPublisher_;
-    ros::Publisher node_list_publisher_;
-    ros::Publisher constraint_list_publisher_;
-    ros::NodeHandle node_;
-    int node_num_per_submap_;
-    std::map<int, cv::Mat> cv_submaps_;
-    bool ok_;
-};
 
 } //top
 } //sample_carto
 
-#endif //SAMPLE_CARTO_TOP_MAPPUBLISHER_H_
+

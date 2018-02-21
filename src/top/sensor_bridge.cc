@@ -29,12 +29,10 @@ using sample_carto::transform::Rigid3d;
 
 std::unique_ptr<::sample_carto::sensor::OdometryData> SensorBridge::ToOdometryData(const nav_msgs::Odometry::ConstPtr &msg)
 {
-    double time = msg->header.stamp.toSec();
-    //TODO tf_pose (liu)
-  transform::Rigid3d pose({-0.0,0,0},transform::RollPitchYaw(0,0,0));
-
-    return ::sample_carto::common::make_unique<::sample_carto::sensor::OdometryData>
-            (::sample_carto::sensor::OdometryData{time, ToRigid3d(msg->pose.pose)*pose});
+  double time = msg->header.stamp.toSec();
+  //TODO tf_pose (liu)
+  transform::Rigid3d pose({baselink_to_laser_x_, baselink_to_laser_y_, 0}, transform::RollPitchYaw(0, 0, baselink_to_laser_theta_));
+  return ::sample_carto::common::make_unique<::sample_carto::sensor::OdometryData>(::sample_carto::sensor::OdometryData{time, ToRigid3d(msg->pose.pose) * pose});
 }
 
 void SensorBridge::HandleLaserScanMessage(const sensor_msgs::LaserScan::ConstPtr &msg)
@@ -53,19 +51,6 @@ void SensorBridge::HandleOdometryMessage(const nav_msgs::Odometry::ConstPtr& msg
     global_trajectory_builder_ptr_->AddSensorData(*odom_data);
   }
 }
-
-
-
-/*
-void SensorBridge::HandleOdometryMessage(const string &sensor_id, const nav_msgs::Odometry::ConstPtr &msg)
-{
-    std::unique_ptr<::sample_carto::sensor::OdometryData> odometry_data = ToOdometryData(msg);
-    //if (odometry_data != nullptr)
-    //{
-    //    trajectory_builder_->AddOdometerData(sensor_id, odometry_data->time, odometry_data->pose);
-    //}
-}
-*/
 }
 
 }  // namespace sample_carto

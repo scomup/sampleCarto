@@ -37,18 +37,26 @@ options = {
   imu_sampling_ratio = 1.,
 }
 
-MAP_BUILDER.use_trajectory_builder_2d = true
+--- Slower but more precise scan matching
 TRAJECTORY_BUILDER_2D.use_online_correlavtive_scan_matching = false
-TRAJECTORY_BUILDER_2D.scans_per_accumulation = 10
-MAP_BUILDER.sparse_pose_graph.optimize_every_n_scans = 20
-TRAJECTORY_BUILDER_2D.submaps.num_range_data = 15
-MAP_BUILDER.sparse_pose_graph.constraint_builder.max_constraint_distance = 20
+--- merging multiple scan data together
+TRAJECTORY_BUILDER_2D.scans_per_accumulation = 3
+--- n node per submap
+MAP_BUILDER.sparse_pose_graph.optimize_every_n_scans = 40
+TRAJECTORY_BUILDER_2D.submaps.num_range_data = 40
+--- baselink to laser
+TRAJECTORY_BUILDER_2D.baselink_to_laser_x = 0
+TRAJECTORY_BUILDER_2D.baselink_to_laser_y = 0
+TRAJECTORY_BUILDER_2D.baselink_to_laser_theta = 3.14
+--- the search window size for inter constraint
 MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher.angular_search_window = math.rad(45)
 MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher.branch_and_bound_depth = 7
-
+--- the min score for  inter constraint
 MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.90
-MAP_BUILDER.sparse_pose_graph.constraint_builder.log_matches = false
+--- sampling ratio for finding constraint
 MAP_BUILDER.sparse_pose_graph.constraint_builder.sampling_ratio = 1.
+--- log info
+MAP_BUILDER.sparse_pose_graph.constraint_builder.log_matches = false
 MAP_BUILDER.sparse_pose_graph.log_residual_histograms = false
 
 return options

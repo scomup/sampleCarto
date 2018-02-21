@@ -38,9 +38,12 @@ namespace top
 class SensorBridge
 {
 public:
-  explicit SensorBridge( std::shared_ptr<::sample_carto::core::GlobalMapManager> global_trajectory_builder_ptr)
+  explicit SensorBridge(std::shared_ptr<::sample_carto::core::GlobalMapManager> global_trajectory_builder_ptr, double x = 0, double y = 0, double theta = 0)
   {
     global_trajectory_builder_ptr_ = std::move(global_trajectory_builder_ptr);
+    baselink_to_laser_x_ = x;
+    baselink_to_laser_y_ = y;
+    baselink_to_laser_theta_ = theta;
   };
 
   SensorBridge(const SensorBridge &) = delete;
@@ -51,9 +54,12 @@ public:
   void HandleLaserScanMessage(const sensor_msgs::LaserScan::ConstPtr &msg);
   void HandleOdometryMessage(const nav_msgs::Odometry::ConstPtr &msg);
 
+private:
   std::shared_ptr<::sample_carto::core::GlobalMapManager> global_trajectory_builder_ptr_;
+  double baselink_to_laser_x_;
+  double baselink_to_laser_y_;
+  double baselink_to_laser_theta_;
 };
-
 }
 } // namespace sample_carto
 

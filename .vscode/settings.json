@@ -42,6 +42,8 @@
         "vector": "cpp",
         "unordered_map": "cpp",
         "deque": "cpp",
-        "slist": "cpp"
-    }
+        "slist": "cpp",
+        "*.ipp": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }

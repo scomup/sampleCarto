@@ -8,66 +8,75 @@
 #include <src/common/make_unique.h>
 #include <src/common/lua_parameter_dictionary.h>
 #include <src/core/global_manager/global_map_manager.h>
-#include <src/top/sensor_bridge.h>
 
-#include "BagReader.h"
-#include "MapPublisher.h"
+#include "bag_reader.h"
+#include "map_publisher.h"
 
 using namespace sample_carto;
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "scample_carto");
-	ros::start();
-    top::BagReader bagReader("/home/liu/bag/tokyo/lg_1.bag", "/scan", "/odom");
-    //top::BagReader bagReader("/home/liu/bag/kusatsu/lg_kusatsu_C5_1.bag", "/scan", "/odom");
+    ros::start();
+
+    std::string filename;
+    if (argc >= 2)
+    {
+        filename = argv[1];
+    }
+    else
+    {
+        filename = "/home/liu/bag/tokyo/lg_1.bag";
+    }
+
+    top::BagReader bagReader(filename);
+    
     auto file_resolver = common::make_unique<common::FileResolver>(std::vector<string>{std::string("/home/liu/workspace/sampleCarto/configuration_files")});
     const string code = file_resolver->GetFileContentOrDie("test.lua");
     common::LuaParameterDictionary parameter_dictionary(code, std::move(file_resolver));
     core::LocalMapBuilderOptions local_map_builder_options;
     local_map_builder_options.Create(parameter_dictionary.GetDictionary("trajectory_builder").get()->GetDictionary("trajectory_builder_2d").get());
-	core::SparsePoseGraphOptions sparse_pose_graph_options;
+    core::SparsePoseGraphOptions sparse_pose_graph_options;
     sparse_pose_graph_options.Create(parameter_dictionary.GetDictionary("map_builder").get()->GetDictionary("sparse_pose_graph").get());
 
     auto golbal_map_manager_ptr = std::make_shared<core::GlobalMapManager>(local_map_builder_options, sparse_pose_graph_options);
-    top::SensorBridge sensor_bridge(golbal_map_manager_ptr);
+    top::SensorBridge sensor_bridge(golbal_map_manager_ptr,
+                                    local_map_builder_options.baselink_to_laser_x_,
+                                    local_map_builder_options.baselink_to_laser_y_,
+                                    local_map_builder_options.baselink_to_laser_theta_);
 
-	top::Publisher pub = top::Publisher(golbal_map_manager_ptr, 0.3, local_map_builder_options.submaps_options_.num_range_data_);
+    top::Publisher pub = top::Publisher(golbal_map_manager_ptr, 0.3, local_map_builder_options.submaps_options_.num_range_data_);
     std::thread t1(&top::Publisher::pcd, &pub);
     ros::Rate loop_rate(10000);
 
     while (ros::ok())
     {
-        if (bagReader.scan_raw_datas_.size() == 0 || bagReader.odom_raw_datas_.size() == 0)
+        if (bagReader.is_finished())
         {
-            
             break;
         }
-        auto scan = bagReader.scan_raw_datas_.front();
-        auto odom = bagReader.odom_raw_datas_.front();
-        if (scan.header.stamp < odom.header.stamp)
+        const rosbag::MessageInstance &message = bagReader.next_msg();
+        if (bagReader.is_scan(message))
         {
-            //static int c=0;
-            //printf("%d\n",c++);
-            auto scan_ptr = boost::make_shared<const ::sensor_msgs::LaserScan>(scan);
+            auto scan_ptr = message.instantiate<sensor_msgs::LaserScan>();
             sensor_bridge.HandleLaserScanMessage(scan_ptr);
-            bagReader.scan_raw_datas_.pop_front();
         }
-        else
+        else if (bagReader.is_odom(message))
         {
-            auto odom_ptr = boost::make_shared<const ::nav_msgs::Odometry>(odom);
+            auto odom_ptr = message.instantiate<nav_msgs::Odometry>();
             sensor_bridge.HandleOdometryMessage(odom_ptr);
-            bagReader.odom_raw_datas_.pop_front();
         }
-        
         loop_rate.sleep();
     }
-    //golbal_map_manager_ptr->sparse_pose_graph()->RunFinalOptimization();
+    golbal_map_manager_ptr->sparse_pose_graph()->RunFinalOptimization();
+
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
-    pub.end();
+    pub.finish();
+
     t1.join();
 
-    std::cout<<"Finished!\n";
+    std::cout << "Finished!\n";
 
     return 0;
 }
