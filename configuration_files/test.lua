@@ -47,11 +47,11 @@ TRAJECTORY_BUILDER_2D.submaps.num_range_data = 40
 --- baselink to laser
 TRAJECTORY_BUILDER_2D.baselink_to_laser_x = 0
 TRAJECTORY_BUILDER_2D.baselink_to_laser_y = 0
-TRAJECTORY_BUILDER_2D.baselink_to_laser_theta = 3.14
+TRAJECTORY_BUILDER_2D.baselink_to_laser_theta = 0
 --- the search window size for inter constraint
 MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher.angular_search_window = math.rad(45)
 MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher.branch_and_bound_depth = 7
---- the min score for  inter constraint
+--- the min score for inter constraint
 MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.90
 --- sampling ratio for finding constraint
 MAP_BUILDER.sparse_pose_graph.constraint_builder.sampling_ratio = 1.

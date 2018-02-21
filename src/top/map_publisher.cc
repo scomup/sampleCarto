@@ -241,23 +241,14 @@ namespace top
 
     void Publisher::makeMap()
     {
+        double resolution = 0.05;
 
         const auto all_submap_data = global_map_builder_ptr_->sparse_pose_graph()->GetAllSubmapData();
         if (all_submap_data.size() == 0)
             return;
-        std::vector<int8_t> &data = map_.map.data;
 
-        map_.map.info.origin.position.x = -100;
-        map_.map.info.origin.position.y = -100;
-        map_.map.info.origin.orientation.w = 1;
-        map_.map.info.resolution = 0.05;
-        map_.map.info.width = 4000;
-        map_.map.info.height = 4000;
-
-        map_.map.header.frame_id = "map";
-        map_.map.data.resize(map_.map.info.width * map_.map.info.height);
-        map_.map.header.stamp = ros::Time::now();
-        memset(&map_.map.data[0], -1, sizeof(int8_t) * map_.map.data.size());
+        std::vector<std::pair<Eigen::Array2i,double>> known_points;
+        Eigen::AlignedBox2i known_cells_box;
 
         for (core::SparsePoseGraph::SubmapDataWithPose m : all_submap_data)
         {
@@ -265,7 +256,7 @@ namespace top
             core::map::CellLimits limits;
             const auto &grid = m.submap->probability_grid();
             grid.ComputeCroppedLimits(&offset, &limits);
-            auto to_optimized = m.pose * m.submap->local_pose().inverse();
+            auto local_to_global = m.pose * m.submap->local_pose().inverse();
 
             for (const Eigen::Array2i &xy_index : core::map::XYIndexRangeIterator(limits))
             {
@@ -274,23 +265,39 @@ namespace top
                 {
                     double x = grid.limits().max().x() - (offset.y() + xy_index.y() + 0.5) * grid.limits().resolution();
                     double y = grid.limits().max().y() - (offset.x() + xy_index.x() + 0.5) * grid.limits().resolution();
-                    auto optimized = to_optimized * transform::Rigid3d::Translation(Eigen::Vector3d(x, y, 0.));
-
-                    int x_map = (optimized.translation().x()) / grid.limits().resolution() + map_.map.info.width / 2;
-                    int y_map = (optimized.translation().y()) / grid.limits().resolution() + map_.map.info.height / 2;
-
-                    const double p = grid.GetProbability(xy_index + offset);
-                    if (data[y_map * map_.map.info.width + x_map] <= 0)
-                    {
-                        int map_state = -1;
-                        if (p > 0.51)
-                            map_state = p * 100;
-                        else if (p < 0.49)
-                            //map_state = -(1 - p) * 100;
-                            map_state = 0;
-                        data[y_map * map_.map.info.width + x_map] = map_state;
-                    }
+                    auto world_pose = local_to_global * transform::Rigid3d::Translation(Eigen::Vector3d(x, y, 0.));
+                    Eigen::Array2i map_pose = Eigen::Array2i(world_pose.translation().x() / resolution, world_pose.translation().y() / resolution);
+                    known_points.emplace_back(map_pose, grid.GetProbability(xy_index + offset));
+                    known_cells_box.extend(map_pose.matrix());
                 }
+            }
+        }
+
+        std::vector<int8_t> &data = map_.map.data;
+        map_.map.info.origin.position.x = known_cells_box.min().x() * 0.05;
+        map_.map.info.origin.position.y = known_cells_box.min().y() * 0.05;
+        map_.map.info.origin.orientation.w = 1;
+        map_.map.info.resolution = resolution;
+        map_.map.info.width = known_cells_box.sizes().x() + 1;
+        map_.map.info.height = known_cells_box.sizes().y() + 1;
+
+        map_.map.header.frame_id = "map";
+        map_.map.data.resize(map_.map.info.width * map_.map.info.height);
+        map_.map.header.stamp = ros::Time::now();
+        memset(&map_.map.data[0], -1, sizeof(int8_t) * map_.map.data.size());
+        for (const auto &known_point : known_points)
+        {
+
+            Eigen::Array2i map_point = known_point.first - known_cells_box.min().array();
+
+            if (data[map_point.y() * map_.map.info.width + map_point.x()] <= 0)
+            {
+                int map_state = -1;
+                if (known_point.second > 0.51)
+                    map_state = known_point.second * 100;
+                else if (known_point.second < 0.49)
+                    map_state = 0;
+                data[map_point.y() * map_.map.info.width + map_point.x()] = map_state;
             }
         }
     }
