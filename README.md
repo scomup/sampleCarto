@@ -19,7 +19,7 @@ add the visualization for map topic and node_list topic.
   
 If your robot center is different from laser center, Please modify the following parameters in test.lua.  
 
-<test.lua>
+<test.lua>  
 TRAJECTORY_BUILDER_2D.baselink_to_laser_x = 0  
 TRAJECTORY_BUILDER_2D.baselink_to_laser_y = 0  
 TRAJECTORY_BUILDER_2D.baselink_to_laser_theta = 0  
