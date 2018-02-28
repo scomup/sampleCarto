@@ -1,4 +1,5 @@
 #include "map_publisher.h"
+#include "src/common/mutex.h"
 
 
 namespace sample_carto
@@ -164,9 +165,9 @@ namespace top
                 marker.header.frame_id = "/map";
                 marker.header.stamp = ros::Time::now();
 
-                marker.scale.x = 0.1;
-                marker.scale.y = 0.1;
-                marker.scale.z = 0.1;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.01;
+                marker.scale.z = 0.01;
 
                 marker.pose.position.z = 0.1;
                 std::stringstream name;
@@ -209,15 +210,17 @@ namespace top
             marker.header.stamp = ros::Time::now();
             if (node_id_data.first % node_num_per_submap_ == 0)
             {
-                marker.scale.x = 0.5;
-                marker.scale.y = 0.5;
-                marker.scale.z = 0.5;
+                marker.scale.x = 0.1;
+                marker.scale.y = 0.1;
+                marker.scale.z = 0.1;
+                marker.type = visualization_msgs::Marker::CUBE;
             }
             else
             {
-                marker.scale.x = 0.2;
-                marker.scale.y = 0.2;
-                marker.scale.z = 0.2;
+                marker.scale.x = 0.05;
+                marker.scale.y = 0.05;
+                marker.scale.z = 0.05;
+                marker.type = visualization_msgs::Marker::SPHERE;
             }
             marker.pose.position.z = 0.1;
             std::stringstream name;
@@ -230,7 +233,6 @@ namespace top
 
             marker.pose.position.x = node_point.x;
             marker.pose.position.y = node_point.y;
-            marker.type = visualization_msgs::Marker::SPHERE;
             marker.action = visualization_msgs::Marker::ADD;
 
             markers_array.markers.push_back(marker);
@@ -252,9 +254,12 @@ namespace top
 
         for (core::SparsePoseGraph::SubmapDataWithPose m : all_submap_data)
         {
+            //if(!m.submap->finished())
+            //    continue;
             Eigen::Array2i offset;
             core::map::CellLimits limits;
-            const auto &grid = m.submap->probability_grid();
+            auto grid = std::const_pointer_cast<core::map::Submap>(m.submap)->grid_copy();
+            //core::map::ProbabilityGrid grid = m.submap->probability_grid();
             grid.ComputeCroppedLimits(&offset, &limits);
             auto local_to_global = m.pose * m.submap->local_pose().inverse();
 
@@ -293,9 +298,9 @@ namespace top
             if (data[map_point.y() * map_.map.info.width + map_point.x()] <= 0)
             {
                 int map_state = -1;
-                if (known_point.second > 0.51)
+                if (known_point.second > 0.6)
                     map_state = known_point.second * 100;
-                else if (known_point.second < 0.49)
+                else if (known_point.second < 0.6)
                     map_state = 0;
                 data[map_point.y() * map_.map.info.width + map_point.x()] = map_state;
             }

@@ -27,6 +27,7 @@
 #include "src/core/map/range_data_inserter.h"
 #include "src/sensor/range_data.h"
 #include "src/transform/rigid_transform.h"
+#include "src/common/mutex.h"
 
 namespace sample_carto
 {
@@ -81,6 +82,9 @@ class Submap
     // Number of RangeData inserted.
     uint32 num_range_data() const { return num_range_data_; }
 
+
+    ProbabilityGrid grid_copy();
+      
   protected:
     void SetNumRangeData(const int num_range_data)
     {
@@ -92,6 +96,7 @@ class Submap
     ProbabilityGrid probability_grid_;
     bool finished_ = false;
     int num_range_data_ = 0;
+    common::Mutex mutex_;
 };
 
 class SubmapsOptions

@@ -22,11 +22,6 @@ TRAJECTORY_BUILDER_2D = {
   scans_per_accumulation = 1,
   voxel_filter_size = 0.025,
   
-  baselink_to_laser_x = 0.,
-  baselink_to_laser_y = 0.,
-  baselink_to_laser_theta = 0.,
-
-
   adaptive_voxel_filter = {
     max_length = 0.5,
     min_num_points = 200,

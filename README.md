@@ -11,8 +11,8 @@ I have prepared a bag file (h1.bag), you can do some simple test.
 mkdir build  
 cd build  
 cmake ..  
-make 
-./sampleCarto <path to your bag file>  
+make  
+./sampleCarto path_to_your_bag_file  
 
 ./rviz 
 add the visualization for map topic and node_list topic.  
@@ -20,7 +20,7 @@ add the visualization for map topic and node_list topic.
 If your robot center is different from laser center, Please modify the following parameters in test.lua.  
 
 <test.lua>  
-TRAJECTORY_BUILDER_2D.baselink_to_laser_x = 0  
-TRAJECTORY_BUILDER_2D.baselink_to_laser_y = 0  
-TRAJECTORY_BUILDER_2D.baselink_to_laser_theta = 0  
+baselink_to_laser_x = 0  
+baselink_to_laser_y = 0  
+baselink_to_laser_theta = 0  
 

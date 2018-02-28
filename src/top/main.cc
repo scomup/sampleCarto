@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     }
 
     top::BagReader bagReader(filename);
-    
+
     auto file_resolver = common::make_unique<common::FileResolver>(std::vector<string>{std::string("/home/liu/workspace/sampleCarto/configuration_files")});
     const string code = file_resolver->GetFileContentOrDie("test.lua");
     common::LuaParameterDictionary parameter_dictionary(code, std::move(file_resolver));
@@ -39,13 +39,18 @@ int main(int argc, char **argv)
     core::SparsePoseGraphOptions sparse_pose_graph_options;
     sparse_pose_graph_options.Create(parameter_dictionary.GetDictionary("map_builder").get()->GetDictionary("sparse_pose_graph").get());
 
+    double use_odometry = parameter_dictionary.GetBool("use_odometry");
+    double baselink_to_laser_x = parameter_dictionary.GetDouble("baselink_to_laser_x");
+    double baselink_to_laser_y = parameter_dictionary.GetDouble("baselink_to_laser_y");
+    double baselink_to_laser_theta = parameter_dictionary.GetDouble("baselink_to_laser_theta");
+
     auto golbal_map_manager_ptr = std::make_shared<core::GlobalMapManager>(local_map_builder_options, sparse_pose_graph_options);
     top::SensorBridge sensor_bridge(golbal_map_manager_ptr,
-                                    local_map_builder_options.baselink_to_laser_x_,
-                                    local_map_builder_options.baselink_to_laser_y_,
-                                    local_map_builder_options.baselink_to_laser_theta_);
+                                    baselink_to_laser_x,
+                                    baselink_to_laser_y,
+                                    baselink_to_laser_theta);
 
-    top::Publisher pub = top::Publisher(golbal_map_manager_ptr, 0.3, local_map_builder_options.submaps_options_.num_range_data_);
+    top::Publisher pub =  top::Publisher(golbal_map_manager_ptr, 0.3, local_map_builder_options.submaps_options_.num_range_data_);
     std::thread t1(&top::Publisher::pcd, &pub);
     ros::Rate loop_rate(10000);
 
@@ -63,8 +68,11 @@ int main(int argc, char **argv)
         }
         else if (bagReader.is_odom(message))
         {
-            auto odom_ptr = message.instantiate<nav_msgs::Odometry>();
-            sensor_bridge.HandleOdometryMessage(odom_ptr);
+            if (use_odometry)
+            {
+                auto odom_ptr = message.instantiate<nav_msgs::Odometry>();
+                sensor_bridge.HandleOdometryMessage(odom_ptr);
+            }
         }
         loop_rate.sleep();
     }

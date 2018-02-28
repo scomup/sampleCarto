@@ -72,8 +72,18 @@ void Submap::InsertRangeData(const sensor::RangeData &range_data,
                              const RangeDataInserter &range_data_inserter)
 {
   CHECK(!finished_);
+  //(liu)
+  // the map_publisher may cause segmentation fault beacuse this function will change 
+  // the grid size. we added a mutex for at here to solve this problem.
+  common::MutexLocker locker(&mutex_);
   range_data_inserter.Insert(range_data, &probability_grid_);
   SetNumRangeData(num_range_data() + 1);
+}
+
+ProbabilityGrid Submap::grid_copy()
+{
+  common::MutexLocker locker(&mutex_);
+  return map::ProbabilityGrid(probability_grid_);
 }
 
 void Submap::Finish()
